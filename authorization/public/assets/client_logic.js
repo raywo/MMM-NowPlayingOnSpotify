@@ -6,7 +6,6 @@
   let step3Placeholder = document.getElementById("step3-placeholder");
   let userProfileTemplate = compileUserProfile();
   let errorTemplate = compileErrorTemplate();
-  let configTemplate = compileConfigTemplate();
 
   let params = getHashParams();
   let error = params.error;
@@ -35,7 +34,8 @@
 
           let configParams = {
             clientID: params.clientID,
-            clientSecret: params.clientSecret
+            clientSecret: params.clientSecret,
+            success: true
           };
 
           renderConfig(configParams);
@@ -71,8 +71,7 @@
 
 
   function renderConfig(params) {
-    let source = document.getElementById("config-template").innerHTML;
-    let template = Handlebars.compile(source);
+    let template = compileConfigTemplate();
     let placeholder = document.getElementById("config-placeholder");
 
     if (!params) {

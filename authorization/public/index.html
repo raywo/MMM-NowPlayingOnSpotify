@@ -14,22 +14,22 @@
     <p class="lead">A MagicMirror<sup>2</sup> module which displays your on Spotify currently playing track.</p>
   </div>
 
-  <p>In order to work properly the module needs read access to some of your spotifiy information. Namely these information are: </p>
+  <p>In order to work properly the module needs read access to some of your Spotifiy information. Namely these information are: </p>
   <ul>
     <li>your currently playing track</li>
     <li>your playback status</li>
   </ul>
-  <p>To provide these data you need an app in the <a href="https://beta.developer.spotify.com/dashboard/login">development area of Spotify</a>. This app provides the above mentioned information to your magic mirror. This way it is made sure that you and only you have access to your Spotify data.</p>
+  <p>To provide these data you need an app in the <a href="https://beta.developer.spotify.com/dashboard/login" target="_blank">development area of Spotify</a>. This app provides the above mentioned information to your magic mirror. This way it is made sure that you and only you have access to your Spotify data.</p>
 
   <h2>Step by Step</h2>
 
-  <h4>Step 1: Create a new spotify app</h4>
-  <p>Visit Spotify for Developers and create your new app via the botton on the top right. It doesn’t matter what you type in the fields since only you will see the app. Maybe you should use something you’ll recognize in the future. When asked whether you are developing a commercial integration click “No.” and accept all the checkmarks in the last step.</p>
+  <h4 class="mt-4">Step 1: Create a new Spotify app</h4>
+  <p>Visit <a href="https://beta.developer.spotify.com/dashboard/login" target="_blank">Spotify for Developers</a> and create your new app via the button on the top right. It doesn’t matter what you type in the fields since only you will see the app. Maybe you should use something you’ll recognize in the future. When asked whether you are developing a commercial integration click “No.” and accept all the checkmarks in the last step.</p>
 
   <p>After successfully creating the app you’ll land on the app’s dashboard. There you can see your <code>Client ID</code> and your <code>Client Secret</code> (after clicking on “SHOW CLIENT SECRET”). Please <strong>note both information</strong> for later use. And then click on “Edit Settings”. Add <code>http://localhost:8888/callback</code> to the Redirect URIs and save your settings.</p>
 
 
-  <h4>Step 2: Authorize your new app with your Spotify account</h4>
+  <h4 class="mt-4">Step 2: Authorize your new app with your Spotify account</h4>
 
   <div id="login">
     <div id="form-placeholder"></div>
@@ -39,7 +39,7 @@
     <div id="loggedin-placeholder"></div>
   </div>
 
-  <h4>Step 3: Configure your mirror</h4>
+  <h4 class="mt-4">Step 3: Configure your mirror</h4>
 
   <div id="step3-placeholder">
     <div class="alert alert-danger" role="alert">
@@ -47,11 +47,7 @@
     </div>
   </div>
 
-  <p>Enter your <code>clientID</code> and <code>clientSecret</code> from step 1 into your <code>config.js</code> file.</p>
-
   <div id="config-placeholder"></div>
-
-  <h1 class="display-4">Have fun!</h1>
 </div>
 
 
@@ -88,14 +84,21 @@
 
 
 <script id="config-template" type="text/x-handlebars-template">
-  <pre>
-    {
-      config: {
-        clientID: {{clientID}},
-        clientSecret: {{clientSecret}}
-      }
-    }
-  </pre>
+  {{#if success}}
+
+  <p>Now enter your <code>clientID</code> and <code>clientSecret</code> from step 1 into your <code>config.js</code> file and your good to go.</p>
+
+    <pre>
+{
+  config: {
+    clientID: {{clientID}},
+    clientSecret: {{clientSecret}}
+  }
+}
+    </pre>
+
+    <h1 class="display-4">Have fun!</h1>
+  {{/if}}
 </script>
 
 
