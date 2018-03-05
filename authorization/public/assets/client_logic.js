@@ -33,8 +33,8 @@
           loggedinPlaceholder.innerHTML = userProfileTemplate(response);
 
           let configParams = {
-            clientID: params.clientID,
-            clientSecret: params.clientSecret,
+            accessToken: params.access_token,
+            refreshToken: params.refresh_token,
             success: true
           };
 
