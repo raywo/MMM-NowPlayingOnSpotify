@@ -7,6 +7,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
     // Module misc
     name: 'MMM-NowPlayingOnSpotify',
     hidden: false,
+
     // user definable
     updatesEvery: 5,          // How often should the table be updated in s?
     showCoverArt: true       // Do you want the cover art to be displayed?
@@ -17,6 +18,13 @@ Module.register('MMM-NowPlayingOnSpotify', {
     Log.info("Starting module: " + this.name );
 
     this.initialized = false;
+
+    let credentials = {
+      accessToken: this.config.accessToken,
+      refreshToken: this.config.refreshToken
+    };
+
+    this.sendSocketNotification("CONNECT_TO_SPOTIFY", credentials);
   },
 
   getDom: function () {
@@ -53,5 +61,11 @@ Module.register('MMM-NowPlayingOnSpotify', {
     return [
       this.file("core/NPOS_DomBuilder.js")
     ];
+  },
+
+  socketNotificationReceived: function (notification, payload) {
+    switch (notification) {
+
+    }
   }
 });
