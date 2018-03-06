@@ -1,6 +1,35 @@
 {
   "name": "MMM-NowPlayingOnSpotify",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "A module for MagicMirror 2 displaying the currently playing song on Spotify.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raywo/MMM-NowPlayingOnSpotify"
+  },
+  "keywords": [
+    "magic mirror",
+    "magic mirror 2",
+    "smart mirror",
+    "spotify",
+    "module"
+  ],
+  "author": {
+    "name": "raywo",
+    "email": "ray@skillbird.de",
+    "url": "https://github.com/raywo"
+  },
+  "contributors": [
+    "https://github.com/raywo/MMM-NowPlayingOnSpotify/graphs/contributors"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/raywo/MMM-NowPlayingOnSpotify/issues"
+  },
+  "homepage": "https://github.com/raywo/MMM-NowPlayingOnSpotify",
+  "engines": {
+    "node": ">=7"
+  },
+
   "dependencies": {
     "cookie-parser": "1.3.2",
     "express": "~4.16.0",
