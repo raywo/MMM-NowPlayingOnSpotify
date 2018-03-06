@@ -88,15 +88,20 @@
 <script id="config-template" type="text/x-handlebars-template">
   {{#if success}}
 
-  <p>Now enter your <code>accessToken</code> and <code>refreshToken</code> displayed here into your <code>config.js</code> file and your good to go.</p>
+  <p>Now copy the following snippet into your <code>config.js</code> file and your good to go.</p>
 
     <pre>
 {
+  module: "MMM-NowPlayingOnSpotify",
+  position: "top_left",
+
   config: {
+    clientID: "{{clientID}}",
+    clientSecret: "{{clientSecret}}",
     accessToken: "{{accessToken}}",
     refreshToken: "{{refreshToken}}"
   }
-}
+},
     </pre>
 
     <h1 class="display-4">Have fun!</h1>
