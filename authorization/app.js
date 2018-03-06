@@ -128,8 +128,8 @@ app.get('/callback', function(req, res) {
           querystring.stringify({
             access_token: access_token,
             refresh_token: refresh_token,
-            clientID: client_id,
-            clientSecret: client_secret
+            client_id: client_id,
+            client_secret: client_secret
           }));
       } else {
         res.redirect('/#' +
