@@ -3,11 +3,15 @@ class NPOS_DomBuilder {
 
   constructor(config, pathPrefix) {
     this.config = config;
-    this.pathPrefix = pathPrefix + "/";
+    this.pathPrefix = pathPrefix + '/';
   }
 
   getDom(context) {
-    return this.getWrapper(this.getPlayingContent(context));
+    if (context.noSong) {
+      return this.getWrapper(this.getNothingIsPlayingContent());
+    } else {
+      return this.getWrapper(this.getPlayingContent(context));
+    }
   }
 
   getInitDom(loadingText) {
@@ -15,19 +19,19 @@ class NPOS_DomBuilder {
   }
 
   getWrapper(content) {
-    let wrapper = document.createElement("div");
-    wrapper.className = "small";
+    let wrapper = document.createElement('div');
+    wrapper.className = 'small';
     wrapper.appendChild(content);
 
     return wrapper;
   }
 
   getInitializingContent(loadingText) {
-    let content = document.createElement("div");
-    content.className = "NPOS_initContent";
+    let content = document.createElement('div');
+    content.className = 'NPOS_initContent';
 
-    let loadingDiv = document.createElement("div");
-    loadingDiv.className = "NPOS_loading medium";
+    let loadingDiv = document.createElement('div');
+    loadingDiv.className = 'NPOS_loading medium';
     loadingDiv.innerHTML = loadingText;
 
     content.appendChild(loadingDiv);
@@ -35,10 +39,26 @@ class NPOS_DomBuilder {
     return content;
   }
 
-  getImage(className) {
-    let image = document.createElement("img");
-    image.src = this.pathPrefix + "img/Spotify_Icon_RGB_White.png";
-    image.className += className;
+  getNothingIsPlayingContent() {
+    let content = document.createElement('div');
+    content.className = 'NPOS_nothingIsPlayingContent';
+    content.appendChild(this.getLogoImage());
+
+    return content;
+  }
+
+  getLogoImage() {
+    return this.getImage('img/Spotify_Logo_RGB_White.png', 'NPOS_nothingIsPlayingImage');
+  }
+
+  getIconImage(className) {
+    return this.getImage('img/Spotify_Icon_RGB_White.png', className);
+  }
+
+  getImage(imageName, className) {
+    let image = document.createElement('img');
+    image.src = this.pathPrefix + imageName;
+    image.className = className;
 
     return image;
   }
@@ -61,27 +81,27 @@ class NPOS_DomBuilder {
    * @returns {HTMLDivElement}
    */
   getPlayingContent(context) {
-    let content = document.createElement("div");
+    let content = document.createElement('div');
 
     if (this.config.showCoverArt) {
       content.appendChild(this.getCoverArtDiv(context.imgURL));
     } else {
-      content.appendChild(this.getImage("NPOS_logoImage"));
+      content.appendChild(this.getIconImage('NPOS_logoImage'));
     }
 
-    content.appendChild(this.getInfoDiv("fa fa-music", context.songTitle));
-    content.appendChild(this.getInfoDiv("fa fa-user", context.artist));
-    content.appendChild(this.getInfoDiv("fa fa-folder", context.album));
+    content.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
+    content.appendChild(this.getInfoDiv('fa fa-user', context.artist));
+    content.appendChild(this.getInfoDiv('fa fa-folder', context.album));
     content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
     content.appendChild(this.getProgressBar(context));
-    content.appendChild(this.getInfoDiv("", context.deviceName));
+    content.appendChild(this.getInfoDiv('', context.deviceName));
 
     return content;
   }
 
   getProgressBar(context) {
-    let progressBar = document.createElement("progress");
-    progressBar.className = "NPOS_progress";
+    let progressBar = document.createElement('progress');
+    progressBar.className = 'NPOS_progress';
     progressBar.value = context.progress;
     progressBar.max = context.titleLength;
 
@@ -92,16 +112,16 @@ class NPOS_DomBuilder {
     let currentPos = moment.duration(context.progress);
     let length = moment.duration(context.titleLength);
 
-    return currentPos.format() + " / " + length.format();
+    return currentPos.format() + ' / ' + length.format();
   }
 
   getInfoDiv(symbol, text) {
-    let infoDiv = document.createElement("div");
-    infoDiv.className = "NPOS_infoText";
+    let infoDiv = document.createElement('div');
+    infoDiv.className = 'NPOS_infoText';
 
     if (symbol) {
-      let icon = document.createElement("i");
-      icon.className = "NPOS_icon " + symbol;
+      let icon = document.createElement('i');
+      icon.className = 'NPOS_icon ' + symbol;
       infoDiv.appendChild(icon);
     }
 
@@ -111,12 +131,12 @@ class NPOS_DomBuilder {
   }
 
   getCoverArtDiv(coverURL) {
-    let coverArea = document.createElement("div");
-    coverArea.className = "NPOS_coverArtArea";
+    let coverArea = document.createElement('div');
+    coverArea.className = 'NPOS_coverArtArea';
 
-    let cover = document.createElement("img");
+    let cover = document.createElement('img');
     cover.src = coverURL;
-    cover.className = "NPOS_albumCover";
+    cover.className = 'NPOS_albumCover';
 
     coverArea.appendChild(cover);
 

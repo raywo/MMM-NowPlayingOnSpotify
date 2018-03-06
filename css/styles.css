@@ -19,6 +19,17 @@
   width: 100%;
 }
 
+.NPOS_nothingIsPlayingContent {
+  width: 100%;
+}
+
+.NPOS_nothingIsPlayingImage {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0.2;
+}
+
 .NPOS_logoImage {
   opacity: 0.2;
   position: absolute;
