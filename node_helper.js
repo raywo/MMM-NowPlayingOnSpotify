@@ -17,6 +17,10 @@ module.exports = NodeHelper.create({
         this.connector = new SpotifyConnector(payload);
         this.retrieveCurrentSong();
         break;
+
+      case 'UPDATE_CURRENT_SONG':
+        this.retrieveCurrentSong();
+        break;
     }
   },
 
@@ -24,33 +28,34 @@ module.exports = NodeHelper.create({
   retrieveCurrentSong: function () {
     this.connector.retrieveCurrentlyPlaying()
       .then((response) => {
-        this.sendRetrievedNotification(response);
+        if (response) {
+          this.sendRetrievedNotification(response);
+        } else {
+          this.sendRetrievedNotification({ noSong: true });
+        }
       })
       .catch((error) => {
-        // access token expired
-        if (error.statusCode === 401) {
-          console.log('Access token expired. Refreshing...');
-          this.connector.refreshAccessToken(this.retrieveCurrentSong);
-        } else {
-          console.error('Can’t retrieve current song. Reason: ');
-          console.error(error.message);
-        }
-
+        console.error('Can’t retrieve current song. Reason: ');
+        console.error(error);
       });
   },
 
 
-  sendRetrievedNotification: function (originalResponse) {
-    let payload = {
-      imgURL: this.getImgURL(originalResponse.item.album.images),
-      songTitle: originalResponse.item.name,
-      artist: this.getArtistName(originalResponse.item.artists),
-      album: originalResponse.item.album.name,
-      titleLength: originalResponse.item.duration_ms,
-      progress: originalResponse.progress_ms,
-      isPlaying: originalResponse.isPlaying,
-      deviceName: originalResponse.device.name
-    };
+  sendRetrievedNotification: function (songInfo) {
+    let payload = songInfo;
+
+    if (!songInfo.noSong) {
+      payload = {
+        imgURL: this.getImgURL(songInfo.item.album.images),
+        songTitle: songInfo.item.name,
+        artist: this.getArtistName(songInfo.item.artists),
+        album: songInfo.item.album.name,
+        titleLength: songInfo.item.duration_ms,
+        progress: songInfo.progress_ms,
+        isPlaying: songInfo.isPlaying,
+        deviceName: songInfo.device.name
+      };
+    }
 
     this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
   },

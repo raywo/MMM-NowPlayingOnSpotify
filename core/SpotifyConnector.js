@@ -1,34 +1,52 @@
 'use strict';
 
 const request = require('request-promise-native');
-const fs = require('fs');
+const moment = require('moment');
 
-const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
 const tokenRefreshEndpoint = 'https://accounts.spotify.com/api/token';
 const apiEndpoint = 'https://api.spotify.com/v1/me/player';
-const redirectURI = 'http://localhost:8888/callback';
 
 
 module.exports = class SpotifyConnector {
 
   constructor(credentials) {
     this.credentials = credentials;
-    this.credentialsFile = this.credentials.filePath + 'credentials.json';
+    this.tokenExpiresAt = moment();
   }
 
   retrieveCurrentlyPlaying() {
-    this.updateAccessToken();
+    if (moment().isBefore(this.tokenExpiresAt)) {
+      return this.getSpotifyData();
 
+    } else {
+      return this.refreshAccessToken()
+        .then((response) => {
+          console.log('Refreshed access token because it has expired. Expired at: %s now is: %s',
+            this.tokenExpiresAt.format('HH:mm:ss'), moment().format('HH:mm:ss'));
+
+          this.credentials.accessToken = response.access_token;
+          this.tokenExpiresAt = moment().add(response.expires_in, 'seconds');
+
+          return this.getSpotifyData();
+        })
+        .catch((err) => {
+          console.error('Error while refreshing:');
+          console.error(err);
+        });
+    }
+  }
+
+  getSpotifyData() {
     let options = {
       url: apiEndpoint,
-      headers: { 'Authorization': 'Bearer ' + this.credentials.accessToken },
+      headers: {'Authorization': 'Bearer ' + this.credentials.accessToken},
       json: true
     };
 
     return request.get(options);
   }
 
-  refreshAccessToken(callback) {
+  refreshAccessToken() {
     let client_id = this.credentials.clientID;
     let client_secret = this.credentials.clientSecret;
     let options = {
@@ -41,28 +59,6 @@ module.exports = class SpotifyConnector {
       json: true
     };
 
-    request.post(options).then((response) => {
-      this.credentials.accessToken = response.access_token;
-      this.writeCredentialsToFile();
-      callback();
-    });
-  }
-
-  writeCredentialsToFile() {
-    let serializedCredentials = JSON.stringify(this.credentials);
-    fs.writeFileSync(this.credentialsFile, serializedCredentials);
-  }
-
-
-  readCredentialsFromFile() {
-    return fs.readFileSync(this.credentialsFile, 'utf8');
-  }
-
-  updateAccessToken() {
-    let newCredentials = this.readCredentialsFromFile();
-
-    if (newCredentials.accessToken) {
-      this.credentials = newCredentials;
-    }
+    return request.post(options);
   }
 };
