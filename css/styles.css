@@ -40,6 +40,7 @@
 .NPOS_infoText {
   max-width: 30ch;
   overflow: hidden;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
