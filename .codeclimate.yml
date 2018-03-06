@@ -1,0 +1,17 @@
+engines:
+  markdownlint:
+    enabled: true
+    # ... CONFIG CONTENT ...
+    checks:
+      # trailing spaces
+      MD009:
+        enabled: false
+      # multiple blank lines
+      MD012:
+        enabled: false
+      # line length
+      MD013:
+        enabled: false
+      # raw html
+      MD033:
+        enabled: false

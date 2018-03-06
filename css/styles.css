@@ -1,0 +1,65 @@
+
+.NPOS_initContent {
+  background-image: url("../img/background_icon.png");
+  display: table;
+  height: 250px;
+  width: 250px;
+}
+
+.NPOS_loading {
+  display: table-cell;
+  opacity: 1;
+  text-align: center;
+  vertical-align: middle;
+  height: 100%;
+  width: 100%;
+}
+
+.NPOS_albumCover {
+  width: 100%;
+}
+
+.NPOS_nothingIsPlayingContent {
+  width: 100%;
+}
+
+.NPOS_nothingIsPlayingImage {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0.2;
+}
+
+.NPOS_logoImage {
+  opacity: 0.2;
+  position: absolute;
+  right: 0;
+  width: 100px;
+}
+
+.NPOS_infoText {
+  max-width: 30ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.NPOS_icon {
+  margin-right: 1em;
+}
+
+progress.NPOS_progress {
+  background-color: transparent;
+  border-radius: 1em;
+  border: 1px solid #aaaaaa;
+  height: 0.5em;
+  width: 100%;
+}
+
+progress[value].NPOS_progress::-webkit-progress-bar {
+  background-color: transparent;
+}
+
+progress[value].NPOS_progress::-webkit-progress-value {
+  background-color: #aaaaaa;
+}
