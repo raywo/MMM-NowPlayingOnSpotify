@@ -7,6 +7,7 @@
 </head>
 
 <body>
+
 <div class="container">
   <div class="px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
     <img class="d-block mx-auto mb-4" src="img/Icon.png" alt="" width="72" height="72">
@@ -24,15 +25,9 @@
   <h2>Step by Step</h2>
 
   <h4 class="mt-4">Step 1: Create a new Spotify app</h4>
-  <p>Visit <a href="https://beta.developer.spotify.com/dashboard/login" target="_blank">Spotify for Developers</a> and create your new app via the button on the top right. It doesn’t matter what you type in the fields since only you will see the app. Maybe you should use something you’ll recognize in the future. When asked whether you are developing a commercial integration click “No.” and accept all the checkmarks in the last step.</p>
-
-  <p>After successfully creating the app you’ll land on the app’s dashboard. There you can see your <code>Client ID</code> and your <code>Client Secret</code> (after clicking on “SHOW CLIENT SECRET”). Please <strong>note both information</strong> for later use.</p>
-
-  <p>Click on “Edit Settings” and add <code>http://localhost:8888/callback</code> to the Redirect URIs and save your settings.</p>
-
+  <div id="step1-placeholder"></div>
 
   <h4 class="mt-4">Step 2: Authorize your new app with your Spotify account</h4>
-
   <div id="login">
     <div id="form-placeholder"></div>
   </div>
@@ -42,7 +37,6 @@
   </div>
 
   <h4 class="mt-4">Step 3: Configure your mirror</h4>
-
   <div id="step3-placeholder">
     <div class="alert alert-danger" role="alert">
       <p>Wait for step 2 to complete.</p>
@@ -54,6 +48,13 @@
 
 
 <!-- Templates -->
+<script id="step1-template" type="text/x-handlebars-template">
+  <p>Visit <a href="https://beta.developer.spotify.com/dashboard/login" target="_blank">Spotify for Developers</a> and create your new app via the button on the top right. It doesn’t matter what you type in the fields since only you will see the app. Maybe you should use something you’ll recognize in the future. When asked whether you are developing a commercial integration click “No.” and accept all the checkmarks in the last step.</p>
+
+  <p>After successfully creating the app you’ll land on the app’s dashboard. There you can see your <code>Client ID</code> and your <code>Client Secret</code> (after clicking on “SHOW CLIENT SECRET”). Please <strong>note both information</strong> for later use.</p>
+
+  <p>Click on “Edit Settings” and add <code>{{redirectUri}}</code> to the Redirect URIs and save your settings.</p>
+</script>
 
 <script id="user-profile-template" type="text/x-handlebars-template">
   <div class="media ml-5">
@@ -129,6 +130,7 @@
         </div>
       </div>
     </div>
+    <input type="hidden" name="redirectURI" id="redirectURIField" value="{{redirectURI}}">
     <div class="row mt-2">
       <div class="col">
         <button type="submit" class="btn btn-primary float-right">Authorize my app!</button>
