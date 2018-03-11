@@ -1,7 +1,7 @@
 'use strict';
 
 
-(function() {
+(function () {
   let loggedinPlaceholder = document.getElementById('loggedin-placeholder');
   let step3Placeholder = document.getElementById('step3-placeholder');
   let userProfileTemplate = compileUserProfile();
@@ -10,6 +10,7 @@
   let params = getHashParams();
   let error = params.error;
 
+  renderStep1Content({redirectUri: getRedirectURI()});
   renderForm();
   renderConfig();
 
@@ -40,6 +41,7 @@
             success: true
           };
 
+          renderStep1Content();
           renderConfig(configParams);
           renderSuccessScreen();
         }
@@ -63,10 +65,25 @@
   }
 
 
+  function renderStep1Content(params) {
+    let step1Source = document.getElementById('step1-template').innerHTML;
+    let step1Template = Handlebars.compile(step1Source);
+    let step1Placeholder = document.getElementById('step1-placeholder');
+
+    step1Placeholder.innerHTML = step1Template(params);
+  }
+
+
   function renderForm(params) {
     let formSource = document.getElementById('form-template').innerHTML;
     let formTemplate = Handlebars.compile(formSource);
     let formPlaceholder = document.getElementById('form-placeholder');
+
+    if (params) {
+      params.redirectURI = getRedirectURI();
+    } else {
+      params = {redirectURI: getRedirectURI()};
+    }
 
     formPlaceholder.innerHTML = formTemplate(params);
   }
@@ -101,7 +118,7 @@
     } else if (err.includes('invalid_token')) {
       loggedinPlaceholder.innerHTML = errorTemplate();
       step3Placeholder.innerHTML = compileStep3Template()();
-      renderSuccessScreen()
+      renderSuccessScreen();
     }
   }
 
@@ -152,7 +169,7 @@
     let e, r = /([^&;=]+)=?([^&;]*)/g;
     let q = window.location.hash.substring(1);
 
-    while ( e = r.exec(q)) {
+    while (e = r.exec(q)) {
       hashParams[e[1]] = decodeURIComponent(e[2]);
     }
 
@@ -185,5 +202,9 @@
     let configSource = document.getElementById('config-template').innerHTML;
 
     return Handlebars.compile(configSource);
+  }
+
+  function getRedirectURI() {
+    return window.location.protocol + '//' + window.location.host + '/callback';
   }
 })();
