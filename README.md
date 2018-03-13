@@ -50,7 +50,8 @@ node app
 
 When the app is running you can access it by opening `localhost:8888` in your browser. Provided you are doing this directly on your Raspberry Pi. If you want to access the app remotely just type the ip address or the name of your Raspberry like so for instance: `http://raspi:8888`. Then you should see the authorisation app like below.
 
-<center>![Screenshot for authorisation app](img/readme/screenshot_authorize_app.png)</center>
+|![Screenshot for authorisation app](img/readme/screenshot_authorize_app.png)|
+|---|
 
 Now just follow the steps described there. After successful authorisation the app will display a code snippet under the heading **Step 3: Configure your mirror**. Copy that snippet and paste it into your mirror’s `config.js`. Configure the rest to your needs and you’re good to go.
 
