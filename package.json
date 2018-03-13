@@ -29,7 +29,6 @@
   "engines": {
     "node": ">=7"
   },
-
   "dependencies": {
     "cookie-parser": "1.4.3",
     "express": "~4.16.0",
