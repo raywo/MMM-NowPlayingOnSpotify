@@ -67,7 +67,7 @@ npm install
 ```
 
 
-##Configuring
+## Configuring
 There is not very much to configure but here are the options:
 
 | Option | Description |
