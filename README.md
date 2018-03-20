@@ -25,6 +25,7 @@ To be able to display your currently playing song the module must connect to the
 * MagicMirror<sup>2</sup> instance
 * Node.js version >= 7
 * npm
+* a Spotify account
 
 
 ## Installing
