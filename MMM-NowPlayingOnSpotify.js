@@ -43,7 +43,8 @@ Module.register('MMM-NowPlayingOnSpotify', {
 
   getScripts: function () {
     return [
-      this.file('core/NPOS_DomBuilder.js')
+      this.file('core/NPOS_DomBuilder.js'),
+      'moment.js'
     ];
   },
 
