@@ -35,7 +35,7 @@
     "moment-duration-format": "^2.2.2",
     "npm": "^5.7.1",
     "querystring": "~0.2.0",
-    "request": "^2.83.0",
+    "request": "^2.87.0",
     "request-promise-native": "^1.0.5",
     "body-parser": "^1.18.2"
   }
