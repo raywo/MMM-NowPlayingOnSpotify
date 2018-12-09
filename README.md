@@ -33,7 +33,10 @@ Installing the module is quite straight forward. Getting it to display your play
 
 ### Step 1 – Install the module
 
+In your MagicMirror directory: 
+
 ```bash
+cd modules
 git clone https://github.com/raywo/MMM-NowPlayingOnSpotify.git
 cd MMM-NowPlayingOnSpotify
 npm install
