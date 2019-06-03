@@ -32,7 +32,7 @@
   "dependencies": {
     "cookie-parser": "1.4.3",
     "express": "~4.16.0",
-    "moment-duration-format": "^2.2.2",
+    "moment-duration-format": "^2.3.0",
     "npm": "^5.7.1",
     "querystring": "~0.2.0",
     "request": "^2.83.0",
