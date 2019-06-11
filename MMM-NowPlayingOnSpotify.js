@@ -10,7 +10,8 @@ Module.register('MMM-NowPlayingOnSpotify', {
 
     // user definable
     updatesEvery: 1,          // How often should the table be updated in s?
-    showCoverArt: true       // Do you want the cover art to be displayed?
+    showCoverArt: true,       // Do you want the cover art to be displayed?
+    hideLogo: false
   },
 
 
