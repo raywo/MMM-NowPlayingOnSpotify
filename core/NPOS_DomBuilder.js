@@ -42,7 +42,9 @@ class NPOS_DomBuilder {
   getNothingIsPlayingContent() {
     let content = document.createElement('div');
     content.className = 'NPOS_nothingIsPlayingContent';
-    content.appendChild(this.getLogoImage());
+    if(this.config.showImgWhenNothingIsPlaying){
+      content.appendChild(this.getLogoImage());  
+    }
 
     return content;
   }
