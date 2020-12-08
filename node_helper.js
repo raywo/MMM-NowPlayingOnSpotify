@@ -52,7 +52,7 @@ module.exports = NodeHelper.create({
         album: songInfo.item.album.name,
         titleLength: songInfo.item.duration_ms,
         progress: songInfo.progress_ms,
-        isPlaying: songInfo.isPlaying,
+        is_playing: songInfo.is_playing,
         deviceName: songInfo.device.name
       };
     }
