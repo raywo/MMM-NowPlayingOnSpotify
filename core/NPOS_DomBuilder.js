@@ -73,7 +73,7 @@ class NPOS_DomBuilder {
    *   album: *string*,
    *   titleLength: *num*,
    *   progress: *num*,
-   *   isPlaying: *boolean*,
+   *   is_playing: *boolean*,
    *   deviceName: *string*
    * }
    *
@@ -92,7 +92,7 @@ class NPOS_DomBuilder {
     content.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
     content.appendChild(this.getInfoDiv('fa fa-user', context.artist));
     content.appendChild(this.getInfoDiv('fa fa-folder', context.album));
-    content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
+    content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.is_playing), this.getTimeInfo(context)));
     content.appendChild(this.getProgressBar(context));
     content.appendChild(this.getInfoDiv('', context.deviceName));
 
@@ -143,7 +143,7 @@ class NPOS_DomBuilder {
     return coverArea;
   }
 
-  getPlayStatusIcon(isPlaying) {
-    return isPlaying ? 'fa fa-play' : 'fa fa-pause';
+  getPlayStatusIcon(is_playing) {
+    return is_playing ? 'fa fa-play' : 'fa fa-pause';
   }
 }
