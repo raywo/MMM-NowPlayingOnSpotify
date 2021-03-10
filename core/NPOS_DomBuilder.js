@@ -112,7 +112,7 @@ class NPOS_DomBuilder {
     let currentPos = moment.duration(context.progress);
     let length = moment.duration(context.titleLength);
 
-    return currentPos.format() + ' / ' + length.format();
+    return currentPos.format(mm:ss) + ' / ' + length.format(mm:ss);
   }
 
   getInfoDiv(symbol, text) {
