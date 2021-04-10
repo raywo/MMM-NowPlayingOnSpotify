@@ -96,10 +96,8 @@ class NPOS_DomBuilder {
     content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.is_playing), this.getTimeInfo(context)));
     content.appendChild(this.getProgressBar(context));
     content.appendChild(this.getInfoDiv('', context.deviceName));
-	
 
-    return content;
-    
+    return content; 
   }
 
   getProgressBar(context) {
@@ -107,10 +105,8 @@ class NPOS_DomBuilder {
     progressBar.className = 'NPOS_progress';
     progressBar.value = context.progress;
     progressBar.max = context.titleLength;
-
     	
     return progressBar;
-   
   }
 
   getTimeInfo(context) {
