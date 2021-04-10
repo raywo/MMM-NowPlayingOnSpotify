@@ -7,7 +7,7 @@ class NPOS_DomBuilder {
   }
 
   getDom(context) {
-    if (context.noSong) {
+    if (context.noSong || context.is_playing == 0) {
       return this.getWrapper(this.getNothingIsPlayingContent());
     } else {
       return this.getWrapper(this.getPlayingContent(context));
@@ -42,8 +42,9 @@ class NPOS_DomBuilder {
   getNothingIsPlayingContent() {
     let content = document.createElement('div');
     content.className = 'NPOS_nothingIsPlayingContent';
-    content.appendChild(this.getLogoImage());
-
+    if (!this.config.hideImageWhenNothingIsPlaying) {
+        content.appendChild(this.getLogoImage());
+    }
     return content;
   }
 
@@ -73,7 +74,7 @@ class NPOS_DomBuilder {
    *   album: *string*,
    *   titleLength: *num*,
    *   progress: *num*,
-   *   isPlaying: *boolean*,
+   *   is_playing: *boolean*,
    *   deviceName: *string*
    * }
    *
@@ -92,11 +93,13 @@ class NPOS_DomBuilder {
     content.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
     content.appendChild(this.getInfoDiv('fa fa-user', context.artist));
     content.appendChild(this.getInfoDiv('fa fa-folder', context.album));
-    content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
+    content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.is_playing), this.getTimeInfo(context)));
     content.appendChild(this.getProgressBar(context));
     content.appendChild(this.getInfoDiv('', context.deviceName));
+	
 
     return content;
+    
   }
 
   getProgressBar(context) {
@@ -105,7 +108,9 @@ class NPOS_DomBuilder {
     progressBar.value = context.progress;
     progressBar.max = context.titleLength;
 
+    	
     return progressBar;
+   
   }
 
   getTimeInfo(context) {
@@ -114,6 +119,7 @@ class NPOS_DomBuilder {
 
     return currentPos.format() + ' / ' + length.format();
   }
+
 
   getInfoDiv(symbol, text) {
     let infoDiv = document.createElement('div');
@@ -126,7 +132,7 @@ class NPOS_DomBuilder {
     }
 
     infoDiv.appendChild(document.createTextNode(text));
-
+    
     return infoDiv;
   }
 
@@ -139,11 +145,12 @@ class NPOS_DomBuilder {
     cover.className = 'NPOS_albumCover';
 
     coverArea.appendChild(cover);
-
+    
     return coverArea;
   }
 
-  getPlayStatusIcon(isPlaying) {
-    return isPlaying ? 'fa fa-play' : 'fa fa-pause';
+  getPlayStatusIcon(is_playing) {
+
+   return is_playing ? 'fa fa-play' : 'fa fa-pause';
   }
 }
