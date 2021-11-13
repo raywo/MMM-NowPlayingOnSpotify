@@ -37,6 +37,12 @@
     "querystring": "~0.2.0",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
-    "body-parser": "^1.18.2"
-  }
+    "body-parser": "^1.18.2",
+    "snyk": "^1.88.0"
+  },
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
+  },
+  "snyk": true
 }
