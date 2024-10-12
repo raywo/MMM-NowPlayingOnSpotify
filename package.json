@@ -30,8 +30,8 @@
     "node": ">=7"
   },
   "dependencies": {
-    "cookie-parser": "1.4.3",
-    "express": "~4.16.0",
+    "cookie-parser": "1.4.7",
+    "express": "~4.21.1",
     "moment-duration-format": "^2.2.2",
     "npm": "^5.7.1",
     "querystring": "~0.2.0",
