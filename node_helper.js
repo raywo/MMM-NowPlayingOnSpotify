@@ -25,22 +25,25 @@ module.exports = NodeHelper.create({
   },
 
 
-  retrieveCurrentSong: function () {
-    this.connector.retrieveCurrentlyPlaying()
-      .then((response) => {
-        if (response) {
-          this.sendRetrievedNotification(response);
-        } else {
-          this.sendRetrievedNotification({ noSong: true });
-        }
-      })
-      .catch((error) => {
-        console.error('Can’t retrieve current song. Reason: ');
-        console.error(error);
-      });
-  },
+        retrieveCurrentSong: function () {
+          if (!this.connector) {
+            console.warn('MMM-NowPlayingOnSpotify: connector not ready, skipping update.');
+            return;
+          }
+          this.connector.retrieveCurrentlyPlaying()
+            .then((response) => {
+              if (response) {
+                this.sendRetrievedNotification(response);
+              } else {
+                this.sendRetrievedNotification({ noSong: true });
+              }
+            })
+            .catch((error) => {
+              console.error('Can\'t retrieve current song. Reason: ', error);
+            });
+        },
 
-
+        
   sendRetrievedNotification: function (songInfo) {
     let payload = songInfo;
 
