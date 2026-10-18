@@ -109,7 +109,9 @@ module.exports = class SpotifyAuthServer {
     }
 
     if (requestUrl.pathname === this.callbackPath) {
-      this._handleCallback(requestUrl, res);
+      // An unhandled rejection would terminate the MagicMirror process.
+      this._handleCallback(requestUrl, res)
+        .catch((err) => this.log('Callback handling failed: ' + err.message));
       return;
     }
 
