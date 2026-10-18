@@ -164,7 +164,7 @@ class SpotifyConnector {
   async _parseJson(response) {
     try {
       return await response.json();
-    } catch (err) {
+    } catch {
       return null;
     }
   }

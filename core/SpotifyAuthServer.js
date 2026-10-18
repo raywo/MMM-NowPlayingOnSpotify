@@ -18,7 +18,7 @@
  */
 
 const http = require('http');
-const crypto = require('crypto');
+const { randomBytes } = require('crypto');
 
 const AUTHORIZE_ENDPOINT = 'https://accounts.spotify.com/authorize';
 const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
@@ -98,7 +98,7 @@ module.exports = class SpotifyAuthServer {
     let requestUrl;
     try {
       requestUrl = new URL(req.url, this.entryURL);
-    } catch (err) {
+    } catch {
       this._sendHtml(res, STATUS_BAD_REQUEST, this._page('Bad request', 'Malformed request URL.'));
       return;
     }
@@ -117,7 +117,7 @@ module.exports = class SpotifyAuthServer {
   }
 
   _handleRoot(res) {
-    this.pendingState = crypto.randomBytes(STATE_BYTES).toString('hex');
+    this.pendingState = randomBytes(STATE_BYTES).toString('hex');
 
     const params = new URLSearchParams({
       response_type: 'code',

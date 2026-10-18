@@ -23,6 +23,21 @@ export default [
     }
   },
   {
+    // Loaded via getScripts(), so the class is a browser global.
+    files: ["MMM-NowPlayingOnSpotify.js"],
+    languageOptions: {
+      globals: {
+        NPOS_DomBuilder: "readonly"
+      }
+    }
+  },
+  {
+    files: ["core/NPOS_DomBuilder.js"],
+    rules: {
+      "no-unused-vars": ["error", { varsIgnorePattern: "^NPOS_DomBuilder$" }]
+    }
+  },
+  {
     files: ["**/*.mjs"],
     languageOptions: {
       ecmaVersion: "latest",

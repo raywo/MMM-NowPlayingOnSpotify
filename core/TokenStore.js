@@ -43,7 +43,7 @@ module.exports = class TokenStore {
     try {
       const raw = fs.readFileSync(this.filePath, FILE_ENCODING);
       this.data = JSON.parse(raw);
-    } catch (err) {
+    } catch {
       this.data = {};
     }
     return this.data;
