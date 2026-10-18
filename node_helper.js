@@ -10,9 +10,6 @@
  *
  * Architecture rule: backend polls, frontend shows. On transient errors the
  * last good payload is kept (frontend never blanks).
- *
- * # Modified: [2026-07-03 11:19] - RKORELL: backend poll loop, token store, error taxonomy, integrated reauth
- * # Modified: [2026-07-03 12:31] - RKORELL: run auth server during proactive warning, pass auth URL to frontend
  */
 
 const NodeHelper = require('node_helper');

@@ -2,9 +2,6 @@
  *
  * Builds the module DOM. Runs in the browser (frontend). No external
  * dependencies: durations are formatted locally instead of via moment.
- *
- * # Modified: [2026-07-03 11:19] - RKORELL: re-auth banner, proactive warning, local mm:ss formatting (drop moment-duration-format)
- * # Modified: [2026-07-03 12:31] - RKORELL: i18n via translate, show auth URL in warning + reauth banners
  */
 
 const NPOS_SECONDS_PER_MINUTE = 60;

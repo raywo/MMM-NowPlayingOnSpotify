@@ -19,8 +19,6 @@
  * own authorization flow. For tokens seeded from a legacy config.js it stays
  * null (issue date unknown), so the proactive expiry warning is skipped for
  * those; the hard invalid_grant path still catches their expiry.
- *
- * # Modified: [2026-07-03 11:19] - RKORELL: new file (self-managed token store)
  */
 
 const fs = require('fs');

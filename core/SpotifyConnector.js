@@ -12,8 +12,6 @@
  *                         last good data and retry on the next poll.
  *   - null              : nothing is playing (HTTP 204).
  *   - <object>          : the raw Spotify player payload (HTTP 200).
- *
- * # Modified: [2026-07-03 11:19] - RKORELL: rewrite on fetch, error taxonomy, token persistence + rotation
  */
 
 const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';

@@ -7,18 +7,14 @@
  * after the refresh token expires.
  *
  * It is started by node_helper only when authorization is required. The user
- * opens the server URL in a normal browser on any LAN device (e.g. a laptop),
- * signs in at Spotify, and Spotify redirects back to /callback on this server.
- * The freshly obtained tokens are written to the TokenStore and onSuccess() is
- * invoked so the module recovers in-process, without a restart.
+ * opens the server URL in a browser on the mirror itself or through an SSH
+ * tunnel, signs in at Spotify, and Spotify redirects back to /callback on this
+ * server. The freshly obtained tokens are written to the TokenStore and
+ * onSuccess() is invoked so the module recovers in-process, without a restart.
  *
  * The redirect URI must match the value whitelisted in the Spotify app
- * dashboard. Spotify accepts http only for numeric IP literals, so a LAN IP
- * such as http://192.0.2.10:8888/callback enables re-auth from a laptop.
- *
- * # Modified: [2026-07-03 11:19] - RKORELL: new file (integrated auth/reauth server)
- * # Modified: [2026-07-27 11:00] - RKORELL: genericize LAN IP example in comment (docs IP)
- * # Modified: [2026-07-03 12:31] - RKORELL: bind to loopback (127.0.0.1) only
+ * dashboard. Spotify accepts http only for loopback addresses, so the redirect
+ * URI is http://127.0.0.1:<port>/callback; a LAN IP or hostname is rejected.
  */
 
 const http = require('http');

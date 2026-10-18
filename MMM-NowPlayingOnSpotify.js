@@ -4,9 +4,6 @@
  *
  * Pure display: sends the config once, then renders whatever the backend
  * pushes. No polling timer here (the backend owns the poll cycle).
- *
- * # Modified: [2026-07-03 11:19] - RKORELL: pure display, remove setInterval, add re-auth state
- * # Modified: [2026-07-03 12:31] - RKORELL: i18n (getTranslations), pass translate to DomBuilder
  */
 
 Module.register('MMM-NowPlayingOnSpotify', {
