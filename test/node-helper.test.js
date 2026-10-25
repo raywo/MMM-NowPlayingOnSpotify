@@ -185,6 +185,18 @@ test('a paused song counts as nothing playing', async () => {
   assert.equal(helper.delays.at(-1), 10000);
 });
 
+test('an ad or a podcast episode without track data still counts as playing', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const adBreak = { item: null, currently_playing_type: 'ad', is_playing: true };
+  helper = createPollingHelper(IDLE_CONFIG, [adBreak, adBreak]);
+
+  await helper.poll();
+  mock.timers.tick(30 * MS_PER_SECOND);
+  await helper.poll();
+
+  assert.deepEqual(helper.delays, [1000, 1000]);
+});
+
 test('returns to updatesEvery as soon as something plays again', async () => {
   mock.timers.enable({ apis: ['Date'], now: 0 });
   helper = createPollingHelper(IDLE_CONFIG, [null, null, songData(true), null]);

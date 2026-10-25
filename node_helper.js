@@ -399,8 +399,12 @@ module.exports = NodeHelper.create({
   },
 
 
+  /**
+   * Ads and podcast episodes arrive without an item but still play;
+   * they must not slow down polling for the song that follows.
+   */
   isPlaying: function (data) {
-    return Boolean(data && data.item && data.is_playing);
+    return Boolean(data && data.is_playing);
   },
 
 
