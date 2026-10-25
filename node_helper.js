@@ -330,11 +330,7 @@ module.exports = NodeHelper.create({
       };
     }
 
-    return {
-      imgURL: this.getImgURL(data.item.album.images),
-      songTitle: data.item.name,
-      artist: this.getArtistName(data.item.artists),
-      album: data.item.album.name,
+    return Object.assign(this.getItemInfo(data.item), {
       titleLength: data.item.duration_ms,
       progress: data.progress_ms,
       isPlaying: data.is_playing,
@@ -343,6 +339,29 @@ module.exports = NodeHelper.create({
       authURL: warnURL,
       authRelay: authRelay,
       authUnavailableReason: warnReason
+    });
+  },
+
+
+  /**
+   * A podcast episode fills the song's lines with its publisher and show.
+   */
+  getItemInfo: function (item) {
+    if (item.type === 'episode') {
+      const show = item.show || {};
+      return {
+        imgURL: this.getImgURL(item.images) || this.getImgURL(show.images),
+        songTitle: item.name,
+        artist: show.publisher || '',
+        album: show.name || ''
+      };
+    }
+
+    return {
+      imgURL: this.getImgURL(item.album.images),
+      songTitle: item.name,
+      artist: this.getArtistName(item.artists),
+      album: item.album.name
     };
   },
 
@@ -403,7 +422,7 @@ module.exports = NodeHelper.create({
 
 
   /**
-   * Ads and podcast episodes arrive without an item but still play;
+   * Ads arrive without an item but still play;
    * they must not slow down polling for the song that follows.
    */
   isPlaying: function (data) {

@@ -1,6 +1,6 @@
 # MMM-NowPlayingOnSpotify
 
-A module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) displaying the song currently playing on Spotify: title, artist, album, progress, the playing device and, optionally, the album cover.
+A module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) displaying the song currently playing on Spotify: title, artist, album, progress, the playing device and, optionally, the album cover. A podcast episode shows its publisher in place of the artist and its show in place of the album.
 
 ![A song playing, with cover art](img/readme/NowPlayingOnSpotify.png)
 
@@ -118,7 +118,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 
 | Class | Element |
 |-------|---------|
-| `.NPOS_albumCover` | Album cover image |
+| `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode |
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
