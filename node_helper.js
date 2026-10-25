@@ -441,10 +441,11 @@ module.exports = NodeHelper.create({
 
   /**
    * hideAfter is opt-in: without it, the module never hides on its own.
+   * The stale-data banner must be visible to explain an empty mirror.
    */
   shouldHideWhileIdle: function () {
     const hideAfterSeconds = Number(this.config.hideAfter) || 0;
-    if (hideAfterSeconds <= 0 || this.idleSince === null) {
+    if (hideAfterSeconds <= 0 || this.idleSince === null || this.unavailable) {
       return false;
     }
     return Date.now() - this.idleSince >= hideAfterSeconds * MS_PER_SECOND;

@@ -393,6 +393,21 @@ test('never hides the module without hideAfter', async () => {
   assert.equal(lastSongData(helper).hideWhileIdle, false);
 });
 
+test('shows the module while Spotify is unavailable, so the banner can be seen', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const rateLimited = new SpotifyConnector.RateLimitError('Rate limited by Spotify.', 3 * 60 * 60 * MS_PER_SECOND);
+  helper = createPollingHelper(HIDE_CONFIG, [null, null, rateLimited]);
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+  await helper.poll();
+
+  const payload = lastSongData(helper);
+  assert.equal(payload.unavailable.reason, 'RATE_LIMITED');
+  assert.equal(payload.hideWhileIdle, false);
+});
+
 test('keeps the module hidden across a browser reload', async () => {
   mock.timers.enable({ apis: ['Date'], now: 0 });
   helper = createPollingHelper(HIDE_CONFIG, [null, null]);
