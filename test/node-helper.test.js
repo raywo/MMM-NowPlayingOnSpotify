@@ -245,3 +245,88 @@ test('logs the switch to and from idle polling with the new interval', async () 
     'Playback resumed - polling every 1 s.'
   ]);
 });
+
+function lastSongData(created) {
+  const sent = created.notifications.filter((notification) => notification.name === 'RETRIEVED_SONG_DATA');
+  return sent.at(-1).payload;
+}
+
+test('keeps quiet about failures that end within a minute', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const failure = new SpotifyConnector.TransientError('Network error contacting Spotify: timeout');
+  helper = createPollingHelper(IDLE_CONFIG, [songData(true), failure, songData(true)]);
+
+  await helper.poll();
+  mock.timers.tick(5 * MS_PER_SECOND);
+  await helper.poll();
+  mock.timers.tick(5 * MS_PER_SECOND);
+  await helper.poll();
+
+  const sent = helper.notifications.filter((notification) => notification.payload.unavailable);
+  assert.equal(sent.length, 0);
+});
+
+test('reports Spotify as unreachable once the data is a minute old', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const failure = () => new SpotifyConnector.TransientError('Network error contacting Spotify: timeout');
+  helper = createPollingHelper(IDLE_CONFIG, [songData(true), failure(), failure()]);
+
+  await helper.poll();
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+
+  const payload = lastSongData(helper);
+  assert.equal(payload.unavailable.reason, 'UNREACHABLE');
+  assert.equal(payload.songTitle, 'Song');
+});
+
+test('reports a long rate limit right away with the time of the next attempt', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const waitMs = 3 * 60 * 60 * MS_PER_SECOND;
+  const rateLimited = new SpotifyConnector.RateLimitError('Rate limited by Spotify.', waitMs);
+  helper = createPollingHelper(IDLE_CONFIG, [songData(true), rateLimited]);
+
+  await helper.poll();
+  await helper.poll();
+
+  assert.deepEqual(lastSongData(helper).unavailable, { reason: 'RATE_LIMITED', retryAt: waitMs });
+});
+
+test('reports a rate limit even before the first song arrived', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const rateLimited = new SpotifyConnector.RateLimitError('Rate limited by Spotify.', 3 * 60 * 60 * MS_PER_SECOND);
+  helper = createPollingHelper(IDLE_CONFIG, [rateLimited]);
+
+  await helper.poll();
+
+  const payload = lastSongData(helper);
+  assert.equal(payload.noSong, true);
+  assert.equal(payload.unavailable.reason, 'RATE_LIMITED');
+});
+
+test('drops the report as soon as Spotify answers again', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const rateLimited = new SpotifyConnector.RateLimitError('Rate limited by Spotify.', 3 * 60 * 60 * MS_PER_SECOND);
+  helper = createPollingHelper(IDLE_CONFIG, [rateLimited, songData(true)]);
+
+  await helper.poll();
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).unavailable, undefined);
+});
+
+test('keeps the report across a browser reload', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const rateLimited = new SpotifyConnector.RateLimitError('Rate limited by Spotify.', 3 * 60 * 60 * MS_PER_SECOND);
+  helper = createPollingHelper(IDLE_CONFIG, [songData(true), rateLimited]);
+  helper.initOnce = () => {};
+  helper.startPolling = () => {};
+
+  await helper.poll();
+  await helper.poll();
+  helper.notifications = [];
+  helper.handleConnect(IDLE_CONFIG);
+
+  assert.equal(lastSongData(helper).unavailable.reason, 'RATE_LIMITED');
+});

@@ -19,6 +19,7 @@ const SpotifyAuthServer = require('./core/SpotifyAuthServer');
 const { resolveAuthAddress } = require('./core/LanAddress');
 
 const AuthRequiredError = SpotifyConnector.AuthRequiredError;
+const RateLimitError = SpotifyConnector.RateLimitError;
 
 const MS_PER_SECOND = 1000;
 const DEFAULT_UPDATE_INTERVAL_S = 1;
@@ -29,6 +30,10 @@ const MINUTES_PER_HOUR = 60;
 // the Pi, the network and Spotify's rate limit, which counts per app.
 const DEFAULT_IDLE_AFTER_S = 30;
 const DEFAULT_IDLE_UPDATE_INTERVAL_S = 10;
+
+// Failures are reported on the mirror only once the shown data would be at
+// least this old before the next attempt; brief hiccups stay invisible.
+const STALE_AFTER_MS = 60 * MS_PER_SECOND;
 
 // Proactive re-auth warning: Spotify refresh tokens live ~6 months from the
 // original authorization; warn before the hard expiry so it is never a surprise.
@@ -64,7 +69,10 @@ module.exports = NodeHelper.create({
     // Start of the current stretch without playback, null while playing.
     this.idleSince = null;
     this.idle = false;
-    this.pollFailing = false;
+    // Start of the current run of failed polls, null while polls succeed.
+    this.failingSince = null;
+    // Shown on the mirror while the data is stale: { reason, retryAt }.
+    this.unavailable = null;
   },
 
 
@@ -88,8 +96,8 @@ module.exports = NodeHelper.create({
     }
 
     // Browser reload during normal operation: show cached data immediately.
-    if (this.lastPayload) {
-      this.sendSocketNotification('RETRIEVED_SONG_DATA', this.lastPayload);
+    if (this.lastPayload || this.unavailable) {
+      this.sendSongData();
     }
 
     this.startPolling();
@@ -181,8 +189,8 @@ module.exports = NodeHelper.create({
       const authURL = this.authURLForWarning();
       const payload = this.buildPayload(data, authURL);
       this.lastPayload = payload;
-      this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
       this.noteRecovery();
+      this.sendSongData();
       this.updateIdleState(this.isPlaying(data));
       delayMs = this.updateIntervalMs();
     } catch (error) {
@@ -195,9 +203,9 @@ module.exports = NodeHelper.create({
       if (error.retryAfterMs) {
         delayMs = error.retryAfterMs;
       }
-      this.pollFailing = true;
       this.log('Transient error, retrying in ' + this.formatDelay(delayMs)
         + ', keeping last data: ' + error.message);
+      this.noteFailure(error, delayMs);
     }
 
     this.inFlight = false;
@@ -352,10 +360,42 @@ module.exports = NodeHelper.create({
 
 
   noteRecovery: function () {
-    if (this.pollFailing) {
-      this.pollFailing = false;
+    if (this.failingSince !== null) {
       this.log('Spotify reachable again - showing current data.');
     }
+    this.failingSince = null;
+    this.unavailable = null;
+  },
+
+
+  noteFailure: function (error, delayMs) {
+    const now = Date.now();
+    if (this.failingSince === null) {
+      this.failingSince = now;
+    }
+
+    if (now + delayMs - this.failingSince < STALE_AFTER_MS) {
+      return;
+    }
+
+    this.unavailable = {
+      reason: error instanceof RateLimitError ? 'RATE_LIMITED' : 'UNREACHABLE',
+      retryAt: now + delayMs
+    };
+    this.sendSongData();
+  },
+
+
+  /**
+   * Sends the last good data, marked as stale while Spotify is unavailable.
+   * Without any data yet, the stale report goes with a nothing-playing payload.
+   */
+  sendSongData: function () {
+    let payload = this.lastPayload;
+    if (this.unavailable) {
+      payload = Object.assign({}, payload || this.buildPayload(null, null), { unavailable: this.unavailable });
+    }
+    this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
   },
 
 

@@ -25,8 +25,16 @@ test('a rate-limited token refresh waits as long as Spotify asks', async () => {
   global.fetch = async () => new Response(null, { status: 429, headers: { 'Retry-After': '7200' } });
 
   await assert.rejects(createConnector().retrieveCurrentlyPlaying(), (error) => {
-    assert.ok(error instanceof SpotifyConnector.TransientError);
+    assert.ok(error instanceof SpotifyConnector.RateLimitError);
     assert.equal(error.retryAfterMs, 7200 * 1000);
     return true;
   });
+});
+
+test('a rate-limited player request is reported as a rate limit', async () => {
+  global.fetch = async (url) => url.includes('/api/token')
+    ? Response.json({ access_token: 'token', expires_in: 3600 })
+    : new Response(null, { status: 429, headers: { 'Retry-After': '60' } });
+
+  await assert.rejects(createConnector().retrieveCurrentlyPlaying(), SpotifyConnector.RateLimitError);
 });

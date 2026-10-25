@@ -121,6 +121,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
+| `.NPOS_statusBanner` | Notice that Spotify limits requests or cannot be reached; the module then keeps showing the last known song |
 
 For example, to shrink the cover and hide the logo when nothing is playing:
 
