@@ -106,6 +106,20 @@ cd ~/MagicMirror/modules/MMM-NowPlayingOnSpotify
 git pull
 ```
 
+### If `git pull` reports "no such ref was fetched"
+
+The default branch was renamed from `master` to `main`. Clones made before the rename still track `master` and need a one-time switch:
+
+```bash
+cd ~/MagicMirror/modules/MMM-NowPlayingOnSpotify
+git branch -m master main
+git fetch origin
+git branch -u origin/main main
+git remote set-head origin -a
+```
+
+After that, `git pull` works as before.
+
 ### Upgrading from version 1
 
 Version 1 kept `accessToken` and `refreshToken` in `config.js`. Version 2 moves them into `tokens.json` on the first start. After that:
