@@ -45,10 +45,6 @@ const REAUTH_WARNING_LEAD_DAYS = 14;
 // LAN address yet at boot), try again at this interval.
 const AUTH_RETRY_INTERVAL_MS = 30 * MS_PER_SECOND;
 
-// Album cover selection: prefer a mid-sized image for the mirror.
-const COVER_MIN_WIDTH = 240;
-const COVER_MAX_WIDTH = 350;
-
 
 module.exports = NodeHelper.create({
 
@@ -504,15 +500,19 @@ module.exports = NodeHelper.create({
   },
 
 
+  /**
+   * The widest cover Spotify offers (usually 640 px); the browser scales
+   * it down for a small one. Styled larger than that, it is upscaled.
+   */
   getImgURL: function (images) {
     if (!images || images.length === 0) {
       return '';
     }
 
-    const preferred = images.filter((image) =>
-      image.width >= COVER_MIN_WIDTH && image.width <= COVER_MAX_WIDTH);
+    const widest = images.reduce((best, image) =>
+      (image.width || 0) > (best.width || 0) ? image : best);
 
-    return (preferred[0] || images[0]).url;
+    return widest.url;
   },
 
 
