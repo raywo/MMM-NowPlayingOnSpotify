@@ -140,7 +140,7 @@ module.exports = class SpotifyAuthServer {
     const authorizeURL = AUTHORIZE_ENDPOINT + '?' + params.toString();
 
     const bodyHtml =
-      '<p>Your Spotify authorization has to be renewed for MagicMirror.</p>' +
+      '<p>Authorize MagicMirror to read your Spotify playback.</p>' +
       '<p><a class="btn" href="' + authorizeURL + '">Log in with Spotify</a></p>';
     this._sendHtml(res, STATUS_OK, this._page('Authorize MagicMirror', bodyHtml));
   }
@@ -165,9 +165,9 @@ module.exports = class SpotifyAuthServer {
     try {
       const tokens = await this._exchangeCode(code);
       this.store.updateFromAuth(tokens, new Date());
-      this.log('Re-authorization successful - tokens stored.');
+      this.log('Authorization successful - tokens stored.');
       this._sendHtml(res, STATUS_OK,
-        this._page('All set!', 'MagicMirror is re-authorized. You can close this tab; the mirror recovers automatically.'));
+        this._page('All set!', 'MagicMirror is authorized. You can close this tab; the mirror updates automatically.'));
 
       if (typeof this.onSuccess === 'function') {
         this.onSuccess();
