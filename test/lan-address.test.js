@@ -44,7 +44,7 @@ const NO_INTERFACES = {};
 
 test('resolves the detected address and the default port', () => {
   const interfaces = { en0: [ipv4('192.168.2.151')] };
-  assert.deepEqual(resolveAuthAddress({}, interfaces), { host: '192.168.2.151', port: 8888 });
+  assert.deepEqual(resolveAuthAddress({}, interfaces, false), { host: '192.168.2.151', port: 8888 });
 });
 
 test('prefers the configured authHost and authPort', () => {
@@ -67,5 +67,16 @@ test('rejects an authPort outside the valid range', () => {
 });
 
 test('reports a missing LAN address', () => {
-  assert.equal(resolveAuthAddress({}, NO_INTERFACES).error, 'REAUTH_NO_LAN_ADDRESS');
+  assert.equal(resolveAuthAddress({}, NO_INTERFACES, false).error, 'REAUTH_NO_LAN_ADDRESS');
+});
+
+test('asks for authHost in a container instead of using the container address', () => {
+  const interfaces = { eth0: [ipv4('172.17.0.2')] };
+  assert.equal(resolveAuthAddress({}, interfaces, true).error, 'REAUTH_CONTAINER_NEEDS_AUTH_HOST');
+});
+
+test('uses authHost in a container', () => {
+  const interfaces = { eth0: [ipv4('172.17.0.2')] };
+  assert.deepEqual(resolveAuthAddress({ authHost: '192.168.2.151' }, interfaces, true),
+    { host: '192.168.2.151', port: 8888 });
 });

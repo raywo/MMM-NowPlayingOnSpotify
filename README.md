@@ -63,7 +63,26 @@ On a fresh installation there are no tokens yet, so the mirror shows a red autho
 
 While the banner is shown, the module listens on port 8888 in your local network and accepts nothing but the answer to the login it started.
 
-If the QR code shows a wrong address – for example with several network interfaces or in Docker – set `authHost` to the private IPv4 address your phone can reach, e.g. `192.168.1.20`. A hostname does not work: the relay page forwards to private IPv4 addresses only. If port 8888 is taken, set `authPort`.
+If the QR code shows a wrong address – for example with several network interfaces – set `authHost` to the private IPv4 address your phone can reach, e.g. `192.168.1.20`. A hostname does not work: the relay page forwards to private IPv4 addresses only. If port 8888 is taken, set `authPort`. In a container, see [Running MagicMirror in Docker](#running-magicmirror-in-docker).
+
+### Running MagicMirror in Docker
+
+Inside a container the module only sees the container's own address, which your phone cannot reach. It therefore does not guess: without `authHost` the banner asks you to set it.
+
+1. Set `authHost` to the LAN address of the computer that runs the container:
+   ```javascript
+   authHost: "192.168.1.20"
+   ```
+2. Publish the port on all interfaces, with the same number inside and outside. The phone connects to the host on the port the module listens on inside the container, so `"9999:8888"` or `"127.0.0.1:8888:8888"` does not work:
+   ```yaml
+   services:
+     magicmirror:
+       ports:
+         - "8888:8888"
+   ```
+3. Give the host a fixed address in your router (DHCP reservation). `authHost` does not follow when the address changes.
+
+On Linux, `network_mode: host` is an alternative: the container then uses the host's network and needs no port mapping. Set `authHost` all the same – the module cannot tell host networking from a regular container.
 
 ### Alternative: authorize without the relay page
 

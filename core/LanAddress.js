@@ -7,10 +7,13 @@
  * so the check is shared with docs/callback/relay.js instead of duplicated.
  */
 
+const fs = require('fs');
 const os = require('os');
 const { isPrivateIPv4 } = require('../docs/callback/relay.js');
 
 const LINK_LOCAL_PREFIX = '169.254.';
+// Docker and Podman create these inside every container.
+const CONTAINER_MARKERS = ['/.dockerenv', '/run/.containerenv'];
 const DEFAULT_AUTH_PORT = 8888;
 const MAX_PORT = 65535;
 
@@ -38,16 +41,27 @@ function detectLanAddress(interfaces) {
 
 
 /**
+ * @returns {boolean} True when running inside a Docker or Podman container.
+ */
+function isInContainer() {
+  return CONTAINER_MARKERS.some((marker) => fs.existsSync(marker));
+}
+
+
+/**
  * Resolves where the auth server listens in relay mode. A configured authHost
  * must pass the relay's own check, otherwise the flow would only fail after
- * the user has logged in at Spotify.
+ * the user has logged in at Spotify. For the same reason a container needs
+ * authHost: the detected address there is the container's own, which is
+ * private but unreachable from a phone.
  *
  * @param {object} config Module config with optional authHost and authPort.
  * @param {object} [interfaces] Result of os.networkInterfaces(), for tests.
+ * @param {boolean} [inContainer] Overrides container detection, for tests.
  * @returns {{host: string, port: number}|{error: string, message: string}}
  *   The address, or a translation key and a log message explaining its absence.
  */
-function resolveAuthAddress(config, interfaces) {
+function resolveAuthAddress(config, interfaces, inContainer) {
   const port = Number(config.authPort) || DEFAULT_AUTH_PORT;
   if (!Number.isInteger(port) || port < 1 || port > MAX_PORT) {
     return {
@@ -64,6 +78,13 @@ function resolveAuthAddress(config, interfaces) {
       };
     }
     return { host: config.authHost, port: port };
+  }
+
+  if (inContainer === undefined ? isInContainer() : inContainer) {
+    return {
+      error: 'REAUTH_CONTAINER_NEEDS_AUTH_HOST',
+      message: 'Running in a container - set authHost in config.js to the host\'s LAN address.'
+    };
   }
 
   const host = detectLanAddress(interfaces);
