@@ -1,0 +1,6 @@
+{
+  "REAUTH_REQUIRED_TITLE": "Spotify-Autorisierung erforderlich",
+  "REAUTH_WARNING": "Spotify-Reautorisierung bald erforderlich",
+  "REAUTH_OPEN_URL": "Im Browser öffnen:",
+  "REAUTH_NO_REDIRECT": "Setze \"redirectURI\" in config.js, um die Reautorisierung zu aktivieren."
+}

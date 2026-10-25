@@ -1,7 +1,7 @@
 {
   "name": "MMM-NowPlayingOnSpotify",
-  "version": "1.0.0",
-  "description": "A module for MagicMirror 2 displaying the currently playing song on Spotify.",
+  "version": "2.0.0",
+  "description": "A MagicMirror² module displaying the song currently playing on Spotify.",
   "repository": {
     "type": "git",
     "url": "https://github.com/raywo/MMM-NowPlayingOnSpotify"
@@ -19,24 +19,23 @@
     "url": "https://github.com/raywo"
   },
   "contributors": [
-    "https://github.com/raywo/MMM-NowPlayingOnSpotify/graphs/contributors"
+    "Dr. Ralf Korell (https://github.com/rkorell)"
   ],
   "license": "MIT",
+  "scripts": {
+    "lint": "eslint"
+  },
   "bugs": {
     "url": "https://github.com/raywo/MMM-NowPlayingOnSpotify/issues"
   },
   "homepage": "https://github.com/raywo/MMM-NowPlayingOnSpotify",
   "engines": {
-    "node": ">=7"
+    "node": ">=22"
   },
-  "dependencies": {
-    "cookie-parser": "1.4.3",
-    "express": "~4.16.0",
-    "moment-duration-format": "^2.2.2",
-    "npm": "^5.7.1",
-    "querystring": "~0.2.0",
-    "request": "^2.83.0",
-    "request-promise-native": "^1.0.5",
-    "body-parser": "^1.18.2"
+  "packageManager": "pnpm@12.6.0",
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0"
   }
 }

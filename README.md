@@ -1,111 +1,137 @@
 # MMM-NowPlayingOnSpotify
-A module for the [MagicMirror](https://github.com/MichMich/MagicMirror) project by [Michael Teeuw](https://github.com/MichMich) displaying the song currently playing on Spotify.
 
+A module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) displaying the song currently playing on Spotify: title, artist, album, progress, the playing device and, optionally, the album cover.
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/2742abc792b88536f6e2/maintainability)](https://codeclimate.com/github/raywo/MMM-NowPlayingOnSpotify/maintainability) 
-[![Test Coverage](https://api.codeclimate.com/v1/badges/2742abc792b88536f6e2/test_coverage)](https://codeclimate.com/github/raywo/MMM-NowPlayingOnSpotify/test_coverage)
-[![Known Vulnerabilities](https://snyk.io/test/github/raywo/mmm-NowPlayingOnSpotify/badge.svg?targetFile=package.json)](https://snyk.io/test/github/raywo/mmm-NowPlayingOnSpotify?targetFile=package.json)
-[![Greenkeeper badge](https://badges.greenkeeper.io/raywo/MMM-NowPlayingOnSpotify.svg)](https://greenkeeper.io/)
-[![dependency status](https://david-dm.org/raywo/MMM-NowPlayingOnSpotify.svg)](https://david-dm.org/raywo/MMM-NowPlayingOnSpotify)
-[![chat on gitter](https://badges.gitter.im/raywo.svg)](https://gitter.im/raywo)
+![A song playing, with cover art](img/readme/NowPlayingOnSpotify.png)
 
-
-## How it works
-After installing the module and configuring and setting up the Spotify app the module displays the song you are currently listening to on Spotify. It shows on which of your devices you’re playing the song. If you like you can also display the album cover.
-
-To be able to display your currently playing song the module must connect to the Spotify service and query your private data. For obvious reasons this is not possible for arbitrary apps – or for that matter MagicMirror modules. There are third party solutions which will enable access to your Spotify data. This module is designed to be independent from third party services. Everything you need is in this module respectively is created by yourself.
-
-## Screenshots
-| ![Screenshot when nothing is playing](img/readme/screenshot_nothing_playing.png) | ![Screenshot of a song playing without cover art](img/readme/screenshot_without_coverart.png) | ![Screenshot of a song playing with cover art](img/readme/screenshot_with_coverart.png) |
-|---|---|---|
-| Nothing is playing. | A song is playing and `showCoverArt` is set to `false`. | A song is playing and `showCoverArt` is set to `true`. |
+The module talks to the Spotify Web API directly. You create your own Spotify app, authorize it once, and the module keeps itself authorized from then on. Spotify refresh tokens expire six months after authorization; the module warns you about two weeks ahead and shows a re-authorization banner on the mirror instead of silently going blank.
 
 ## Preconditions
 
-* MagicMirror<sup>2</sup> instance
-* Node.js version >= 7
-* npm
-* a Spotify account
+- A MagicMirror² instance (Node.js 22 or newer)
+- A Spotify Premium account – Spotify only lets Premium accounts create apps in development mode
+- Up to five Spotify users per app – Spotify's limit for apps in development mode
 
+The module has no runtime dependencies.
 
-## Installing
-Installing the module is quite straight forward. Getting it to display your playing songs requires a bit more work.
-
-### Step 1 – Install the module
-
-In your MagicMirror directory: 
+## Installation
 
 ```bash
-cd modules
+cd ~/MagicMirror/modules
 git clone https://github.com/raywo/MMM-NowPlayingOnSpotify.git
-cd MMM-NowPlayingOnSpotify
-npm install
 ```
 
-### Step 2 – Create and authorise a Spotify app
-In order to be able to connect to the Spotify API you need to create an app in the [Spotify developer area](https://beta.developer.spotify.com/dashboard/applications). Then you need to authorise the app to access your personal data. Et voilà!
+There is nothing to install with a package manager.
 
-The module provides you with a special app which describes all the necessary steps and which guides you through the whole process. To use this app change into the `authorization` folder and start the app by typing `node app`. 
+### Step 1 – Create a Spotify app
 
-```bash
-cd authorization
-node app
+Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and note its **Client ID** and **Client Secret**.
+
+Add this **Redirect URI** to the app:
+
+```
+http://127.0.0.1:8888/callback
 ```
 
-When the app is running you can access it by opening `localhost:8888` in your browser. Provided you are doing this directly on your Raspberry Pi. If you want to access the app remotely just type the ip address or the name of your Raspberry like so for instance: `http://raspi:8888`. Then you should see the authorisation app like below.
+Spotify accepts `http` redirect URIs only for the loopback address `127.0.0.1`. `localhost`, a hostname or a LAN IP do not work: some are accepted in the dashboard and then rejected during login. The only part you may change is the port – then change it in `config.js` as well.
 
-|![Screenshot for authorisation app](img/readme/screenshot_authorize_app.png)|
-|---|
-
-Now just follow the steps described there. After successful authorisation the app will display a code snippet under the heading **Step 3: Configure your mirror**. Copy that snippet and paste it into your mirror’s `config.js`. Configure the rest to your needs and you’re good to go.
-
-
-## Updating
-
-Go to the module’s folder inside MagicMirror modules folder and pull the latest version from GitHub and install:
-
-```bash
-git pull
-npm install
-```
-
-
-## Configuring
-There is not very much to configure but here are the options:
-
-| Option | Description |
-|--------|-------------|
-| `showCoverArt` | <p>A boolean value decribing whether an album cover photo should be displayed or not.</p><p>**Type:** `boolean` **OPTIONAL**<br>**Example:** `false`<br>**Default Value:** `true`</p> |
-| `updatesEvery` | <p>An integer determining the interval for display updates.</p><p>**Type:** `integer` **OPTIONAL**<br>**Example:** `5`<br>**Default Value:** `1`</p><p>**Note:** With the default setting the display is updated every second. So when you skip to the next song it is virtually immediately visible. Also the progress bar runs smoothly. If you increase the value you may relieve the strain on your Raspberry’s processor but your display will not be as up-to-date. </p> |
-| `clientID` | <p>A string describing the `clientID` of your Spotify app.</p><p>**Type:** `string` **REQUIRED**<br>**Example:** `"acecg8a4..."`<br>**Default Value:** none</p><p>**Note:** The easiest way to get that value is by copying the code snippet from step 3 in the [authorisation app](#step-2-–-create-and-authorise-a-spotify-app).</p> |
-| `clientSecret` | <p>A string describing the `clientSecret` of your Spotify app.</p><p>**Type:** `string` **REQUIRED**<br>**Example:** `"87978346..."`<br>**Default Value:** none</p><p>**Note:** The easiest way to get that value is by copying the code snippet from step 3 in the [authorisation app](#step-2-–-create-and-authorise-a-spotify-app).</p> |
-| `accessToken` | <p>A string describing the `accessToken ` of your Spotify app.</p><p>**Type:** `string` **REQUIRED**<br>**Example:** `"WaIO1987..."`<br>**Default Value:** none</p><p>**Note:** The easiest way to get that value is by copying the code snippet from step 3 in the [authorisation app](#step-2-–-create-and-authorise-a-spotify-app).</p> |
-| `refreshToken` | <p>A string describing the `refreshToken ` of your Spotify app.</p><p>**Type:** `string` **REQUIRED**<br>**Example:** `"HIuLH798..."`<br>**Default Value:** none</p><p>**Note:** The easiest way to get that value is by copying the code snippet from step 3 in the [authorisation app](#step-2-–-create-and-authorise-a-spotify-app).</p> |
-
-Here is an example for an entry in `config.js`
+### Step 2 – Configure the module
 
 ```javascript
 {
-    module: "MMM-NowPlayingOnSpotify",
-    position: "top_right",
-
-    config: {
-        showCoverArt: false,
-        clientID: "<YOUR_CLIENT_ID>",
-        clientSecret: "<YOUR_CLIENT_SECRET>",
-        accessToken: "<YOUR_ACCESS_TOKEN>",
-        refreshToken: "<YOUR_REFRESH_TOKEN>"
-    }
+  module: "MMM-NowPlayingOnSpotify",
+  position: "top_right",
+  config: {
+    clientID: "<YOUR_CLIENT_ID>",
+    clientSecret: "<YOUR_CLIENT_SECRET>",
+    redirectURI: "http://127.0.0.1:8888/callback"
+  }
 }
 ```
 
+Tokens do not go into `config.js`. The module obtains them in step 3 and stores them in `tokens.json` inside the module folder. The file contains secrets – never share or commit it.
 
-## Special Thanks
+### Step 3 – Authorize
 
-* [Michael Teeuw](https://github.com/MichMich) for inspiring me and many others to build a MagicMirror module.
-* The community of magicmirror.builders for help in the development process and all contributors for finding and fixing errors in this module.
+On a fresh installation there are no tokens yet, so the mirror shows a red authorization banner right away. That is expected. The same steps renew the authorization every six months.
 
+The redirect URI is a loopback address, so the browser you log in with must reach port 8888 on the mirror itself:
 
-## Contributing
+1. On another computer, open an SSH tunnel to the mirror and keep it open:
+   ```bash
+   ssh -L 8888:127.0.0.1:8888 pi@<mirror-ip>
+   ```
+2. In a browser on that computer, open `http://127.0.0.1:8888` and click **Log in with Spotify**.
+3. Spotify redirects back through the tunnel, the module stores the tokens and starts displaying – no restart needed.
 
-If you find any problems, bugs or have questions, please [open a GitHub issue](https://github.com/raywo/MMM-NowPlayingOnSpotify/issues) in this repository.
+Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own desktop.
+
+## Configuration options
+
+| Option | Description |
+|--------|-------------|
+| `clientID` | **Required.** The Client ID of your Spotify app. |
+| `clientSecret` | **Required.** The Client Secret of your Spotify app. |
+| `redirectURI` | **Required.** The redirect URI registered in your Spotify app. The module's authorization server listens on its port. Without it, the module cannot be (re-)authorized. |
+| `showCoverArt` | Show the album cover. Default: `true` |
+| `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
+
+## Customizing the appearance
+
+Override the module's styles in MagicMirror's `css/custom.css` – changes there survive updates of the module. The most useful classes:
+
+| Class | Element |
+|-------|---------|
+| `.NPOS_albumCover` | Album cover image |
+| `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
+| `.NPOS_progress` | Progress bar |
+| `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
+
+For example, to shrink the cover and hide the logo when nothing is playing:
+
+```css
+.MMM-NowPlayingOnSpotify .NPOS_albumCover {
+  width: 50%;
+}
+
+.MMM-NowPlayingOnSpotify .NPOS_nothingIsPlayingImage {
+  display: none;
+}
+```
+
+## Update
+
+```bash
+cd ~/MagicMirror/modules/MMM-NowPlayingOnSpotify
+git pull
+```
+
+### Upgrading from version 1
+
+Version 1 kept `accessToken` and `refreshToken` in `config.js`. Version 2 moves them into `tokens.json` on the first start. After that:
+
+1. Remove `accessToken` and `refreshToken` from `config.js`.
+2. Add `redirectURI` to `config.js` and register the same URI in your Spotify app (see step 1). Without it, the module cannot renew the authorization when the refresh token expires.
+
+The two-week warning is not available for tokens taken over from version 1, because their age is unknown. You see the banner only when they expire; after that re-authorization the warning works as usual.
+
+## Localization
+
+The authorization texts follow MagicMirror's `language` setting. English and German are included in `translations/`; add another language by adding a JSON file there.
+
+## Development
+
+The project uses [pnpm](https://pnpm.io) for its development tooling:
+
+```bash
+pnpm install
+pnpm lint
+```
+
+## Credits
+
+Version 2 – token expiry handling, token store, integrated authorization server and the dependency-free rewrite – was contributed by [Dr. Ralf Korell](https://github.com/rkorell).
+
+## License
+
+MIT, see [LICENSE](LICENSE).

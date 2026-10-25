@@ -1,29 +1,105 @@
+/* MMM-NowPlayingOnSpotify - NPOS_DomBuilder
+ *
+ * Builds the module DOM. Runs in the browser (frontend). No external
+ * dependencies: durations are formatted locally instead of via moment.
+ */
+
+const NPOS_SECONDS_PER_MINUTE = 60;
+const NPOS_MINUTES_PER_HOUR = 60;
+const NPOS_MS_PER_SECOND = 1000;
 
 class NPOS_DomBuilder {
 
-  constructor(config, pathPrefix) {
+  constructor(config, pathPrefix, translate) {
     this.config = config;
     this.pathPrefix = pathPrefix + '/';
+    this.translate = translate || ((key) => key);
   }
 
   getDom(context) {
-    if (context.noSong) {
-      return this.getWrapper(this.getNothingIsPlayingContent());
-    } else {
-      return this.getWrapper(this.getPlayingContent(context));
-    }
+    let content = context.noSong
+      ? this.getNothingIsPlayingContent()
+      : this.getPlayingContent(context);
+
+    return this.getWrapper(content, context.reauthWarning, context.authURL);
   }
 
   getInitDom(loadingText) {
-    return this.getWrapper(this.getInitializingContent(loadingText));
+    return this.getWrapper(this.getInitializingContent(loadingText), false, null);
   }
 
-  getWrapper(content) {
+  getReauthDom(authInfo) {
     let wrapper = document.createElement('div');
     wrapper.className = 'small';
+    wrapper.appendChild(this.getReauthContent(authInfo));
+
+    return wrapper;
+  }
+
+  getWrapper(content, showWarning, authURL) {
+    let wrapper = document.createElement('div');
+    wrapper.className = 'small';
+
+    if (showWarning) {
+      wrapper.appendChild(this.getWarningBanner(authURL));
+    }
     wrapper.appendChild(content);
 
     return wrapper;
+  }
+
+  getWarningBanner(authURL) {
+    let banner = document.createElement('div');
+    banner.className = 'NPOS_reauthBanner NPOS_reauthBanner--warning';
+
+    let title = document.createElement('div');
+    title.className = 'NPOS_reauthTitle';
+    title.innerHTML = this.translate('REAUTH_WARNING');
+    banner.appendChild(title);
+
+    if (authURL) {
+      banner.appendChild(this.getURLBlock(authURL));
+    }
+
+    return banner;
+  }
+
+  getReauthContent(authInfo) {
+    let content = document.createElement('div');
+    content.className = 'NPOS_reauthBanner NPOS_reauthBanner--full';
+
+    let title = document.createElement('div');
+    title.className = 'NPOS_reauthTitle';
+    title.innerHTML = this.translate('REAUTH_REQUIRED_TITLE');
+    content.appendChild(title);
+
+    if (authInfo && authInfo.authURL) {
+      content.appendChild(this.getURLBlock(authInfo.authURL));
+    } else {
+      let text = document.createElement('div');
+      text.className = 'NPOS_reauthText';
+      text.innerHTML = this.translate('REAUTH_NO_REDIRECT');
+      content.appendChild(text);
+    }
+
+    return content;
+  }
+
+  getURLBlock(authURL) {
+    let block = document.createElement('div');
+
+    let label = document.createElement('div');
+    label.className = 'NPOS_reauthText';
+    label.innerHTML = this.translate('REAUTH_OPEN_URL');
+
+    let url = document.createElement('div');
+    url.className = 'NPOS_reauthURL';
+    url.innerHTML = authURL;
+
+    block.appendChild(label);
+    block.appendChild(url);
+
+    return block;
   }
 
   getInitializingContent(loadingText) {
@@ -109,10 +185,24 @@ class NPOS_DomBuilder {
   }
 
   getTimeInfo(context) {
-    let currentPos = moment.duration(context.progress);
-    let length = moment.duration(context.titleLength);
+    return this.formatDuration(context.progress) + ' / ' + this.formatDuration(context.titleLength);
+  }
 
-    return currentPos.format() + ' / ' + length.format();
+  formatDuration(milliseconds) {
+    let totalSeconds = Math.floor((milliseconds || 0) / NPOS_MS_PER_SECOND);
+    let seconds = totalSeconds % NPOS_SECONDS_PER_MINUTE;
+    let totalMinutes = Math.floor(totalSeconds / NPOS_SECONDS_PER_MINUTE);
+    let minutes = totalMinutes % NPOS_MINUTES_PER_HOUR;
+    let hours = Math.floor(totalMinutes / NPOS_MINUTES_PER_HOUR);
+
+    if (hours > 0) {
+      return hours + ':' + this.pad(minutes) + ':' + this.pad(seconds);
+    }
+    return minutes + ':' + this.pad(seconds);
+  }
+
+  pad(value) {
+    return value < 10 ? '0' + value : '' + value;
   }
 
   getInfoDiv(symbol, text) {
