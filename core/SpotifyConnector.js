@@ -112,6 +112,10 @@ class SpotifyConnector {
       }
     }
 
+    if (response.status === HTTP_TOO_MANY_REQUESTS) {
+      throw new TransientError('Rate limited by Spotify (token refresh).', this._retryAfterMs(response));
+    }
+
     throw new TransientError('Token refresh failed with status ' + response.status);
   }
 
