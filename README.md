@@ -118,7 +118,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 
 | Class | Element |
 |-------|---------|
-| `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode |
+| `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode; at most 300px wide and centered, so it does not fill the screen in wide regions such as `upper_third` or `fullscreen_above` |
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
@@ -133,6 +133,14 @@ For example, to shrink the cover and hide the logo when nothing is playing:
 
 .MMM-NowPlayingOnSpotify .NPOS_nothingIsPlayingImage {
   display: none;
+}
+```
+
+To show a larger cover in a wide region, raise the cap:
+
+```css
+.MMM-NowPlayingOnSpotify .NPOS_albumCover {
+  max-width: 600px;
 }
 ```
 
