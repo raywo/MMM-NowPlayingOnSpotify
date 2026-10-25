@@ -84,13 +84,15 @@ const server = http.createServer((req, res) => {
   if (requestUrl.pathname === '/callback') {
     const state = requestUrl.searchParams.get('state');
     const userAgent = req.headers['user-agent'] || 'unknown';
+    // Quoted so that line breaks in the header cannot forge log lines.
+    const loggedAgent = JSON.stringify(userAgent);
     if (!issuedStates.has(state)) {
-      console.log('Callback with unknown state from ' + userAgent);
+      console.log('Callback with unknown state from ' + loggedAgent);
       send(res, STATUS_BAD_REQUEST, page('Unknown state', '<p>Start again from the first page.</p>'));
       return;
     }
     issuedStates.delete(state);
-    console.log('Relay works: ' + userAgent);
+    console.log('Relay works: ' + loggedAgent);
     send(res, STATUS_OK, page('Relay works',
       '<p>The browser followed the relay back to the LAN.</p>' +
       '<p><small>' + escapeHtml(userAgent) + '</small></p>'));
