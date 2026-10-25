@@ -21,6 +21,7 @@ NodeModule._load = originalLoad;
 
 const RELAY_URI = 'https://raywo.github.io/MMM-NowPlayingOnSpotify/callback/';
 const LAN_ADDRESS = '192.168.2.151';
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const RETRY_WINDOW_MS = 60 * 1000;
 
 let helper = null;
@@ -102,4 +103,25 @@ test('does not retry when no redirectURI is configured', () => {
 
   assert.equal(helper.authRetryTimer, null);
   assert.equal(helper.notifications.length, sent);
+});
+
+test('the warning payload says why there is no authorization URL', () => {
+  const obtainedAt = new Date(Date.now() - 180 * MS_PER_DAY);
+  helper = createHelper({ redirectURI: RELAY_URI }, obtainedAt);
+  helper.authUnavailableReason = 'REAUTH_INVALID_AUTH_HOST';
+
+  const payload = helper.buildPayload(null, null);
+
+  assert.equal(payload.reauthWarning, true);
+  assert.equal(payload.authUnavailableReason, 'REAUTH_INVALID_AUTH_HOST');
+});
+
+test('the payload carries no reason outside the warning window', () => {
+  helper = createHelper({ redirectURI: RELAY_URI }, new Date());
+  helper.authUnavailableReason = 'REAUTH_INVALID_AUTH_HOST';
+
+  const payload = helper.buildPayload(null, null);
+
+  assert.equal(payload.reauthWarning, false);
+  assert.equal(payload.authUnavailableReason, null);
 });

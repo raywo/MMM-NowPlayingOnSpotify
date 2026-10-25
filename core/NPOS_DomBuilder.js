@@ -28,7 +28,7 @@ class NPOS_DomBuilder {
       ? this.getNothingIsPlayingContent()
       : this.getPlayingContent(context);
 
-    return this.getWrapper(content, context.reauthWarning, context.authURL, context.authRelay);
+    return this.getWrapper(content, context.reauthWarning, context);
   }
 
   getInitDom(loadingText) {
@@ -43,19 +43,19 @@ class NPOS_DomBuilder {
     return wrapper;
   }
 
-  getWrapper(content, showWarning, authURL, authRelay) {
+  getWrapper(content, showWarning, authInfo) {
     let wrapper = document.createElement('div');
     wrapper.className = 'small';
 
     if (showWarning) {
-      wrapper.appendChild(this.getWarningBanner(authURL, authRelay));
+      wrapper.appendChild(this.getWarningBanner(authInfo));
     }
     wrapper.appendChild(content);
 
     return wrapper;
   }
 
-  getWarningBanner(authURL, authRelay) {
+  getWarningBanner(authInfo) {
     let banner = document.createElement('div');
     banner.className = 'NPOS_reauthBanner NPOS_reauthBanner--warning';
 
@@ -64,8 +64,10 @@ class NPOS_DomBuilder {
     title.innerHTML = this.translate('REAUTH_WARNING');
     banner.appendChild(title);
 
-    if (authURL) {
-      banner.appendChild(this.getURLBlock(authURL, authRelay));
+    if (authInfo.authURL) {
+      banner.appendChild(this.getURLBlock(authInfo.authURL, authInfo.authRelay));
+    } else if (authInfo.authUnavailableReason) {
+      banner.appendChild(this.getUnavailableText(authInfo.authUnavailableReason));
     }
 
     return banner;
@@ -83,13 +85,18 @@ class NPOS_DomBuilder {
     if (authInfo && authInfo.authURL) {
       content.appendChild(this.getURLBlock(authInfo.authURL, authInfo.authRelay));
     } else {
-      let text = document.createElement('div');
-      text.className = 'NPOS_reauthText';
-      text.innerHTML = this.translate((authInfo && authInfo.authUnavailableReason) || 'REAUTH_NO_REDIRECT');
-      content.appendChild(text);
+      content.appendChild(this.getUnavailableText((authInfo && authInfo.authUnavailableReason) || 'REAUTH_NO_REDIRECT'));
     }
 
     return content;
+  }
+
+  getUnavailableText(reasonKey) {
+    let text = document.createElement('div');
+    text.className = 'NPOS_reauthText';
+    text.innerHTML = this.translate(reasonKey);
+
+    return text;
   }
 
   getURLBlock(authURL, authRelay) {

@@ -292,11 +292,18 @@ module.exports = NodeHelper.create({
   buildPayload: function (data, authURL) {
     const reauthWarning = this.isReauthWarningDue();
     const warnURL = reauthWarning ? (authURL || null) : null;
+    const warnReason = reauthWarning ? this.authUnavailableReason : null;
 
     const authRelay = this.isAuthRelay();
 
     if (!data || !data.item) {
-      return { noSong: true, reauthWarning: reauthWarning, authURL: warnURL, authRelay: authRelay };
+      return {
+        noSong: true,
+        reauthWarning: reauthWarning,
+        authURL: warnURL,
+        authRelay: authRelay,
+        authUnavailableReason: warnReason
+      };
     }
 
     return {
@@ -310,7 +317,8 @@ module.exports = NodeHelper.create({
       deviceName: data.device ? data.device.name : '',
       reauthWarning: reauthWarning,
       authURL: warnURL,
-      authRelay: authRelay
+      authRelay: authRelay,
+      authUnavailableReason: warnReason
     };
   },
 
