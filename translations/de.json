@@ -2,5 +2,11 @@
   "REAUTH_REQUIRED_TITLE": "Spotify-Autorisierung erforderlich",
   "REAUTH_WARNING": "Spotify-Reautorisierung bald erforderlich",
   "REAUTH_OPEN_URL": "Im Browser öffnen:",
-  "REAUTH_NO_REDIRECT": "Setze \"redirectURI\" in config.js, um die Reautorisierung zu aktivieren."
+  "REAUTH_SCAN_QR": "Mit dem Handy scannen:",
+  "REAUTH_SAME_NETWORK": "Das Handy muss im selben WLAN sein wie der Spiegel – nicht über mobile Daten oder ein Gastnetz.",
+  "REAUTH_NO_REDIRECT": "Setze „redirectURI“ in config.js, um die Reautorisierung zu aktivieren.",
+  "REAUTH_NO_LAN_ADDRESS": "Die Netzwerkadresse des Spiegels wurde nicht erkannt. Setze „authHost“ in config.js.",
+  "REAUTH_INVALID_AUTH_HOST": "„authHost“ in config.js muss die private IPv4-Adresse des Spiegels sein, z. B. 192.168.1.20.",
+  "REAUTH_INVALID_AUTH_PORT": "„authPort“ in config.js muss ein Port zwischen 1 und 65535 sein.",
+  "REAUTH_CONTAINER_NEEDS_AUTH_HOST": "Der Spiegel läuft in einem Container. Setze „authHost“ in config.js auf die Netzwerkadresse des Hosts."
 }
