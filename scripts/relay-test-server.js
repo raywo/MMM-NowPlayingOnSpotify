@@ -10,6 +10,9 @@
  * Then open the printed URL on a phone in the same network and tap the link.
  * The phone visits the relay page with a fake code; if the browser lets the
  * relay navigate back, this server shows "Relay works" and logs the request.
+ * Whether that happened on its own or only after tapping the relay's fallback
+ * link, only the tester sees: browsers send no Fetch Metadata headers to an
+ * http LAN address, so the server cannot tell.
  *
  * RELAY_URL overrides the relay page, e.g. for a self-hosted copy.
  */
@@ -59,15 +62,6 @@ function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 }
 
-// Tells the automatic forward apart from a tap on the relay's fallback link,
-// which would hide that the browser blocked the forward.
-function describeNavigation(headers) {
-  if (!headers['sec-fetch-mode']) {
-    return 'unknown (browser sends no Fetch Metadata)';
-  }
-  return headers['sec-fetch-user'] === '?1' ? 'after tapping the fallback link' : 'automatic';
-}
-
 
 const host = process.argv[2] || detectLanAddress();
 const port = Number(process.argv[3]) || DEFAULT_PORT;
@@ -96,11 +90,9 @@ const server = http.createServer((req, res) => {
       return;
     }
     issuedStates.delete(state);
-    const navigation = describeNavigation(req.headers);
-    console.log('Relay works, forward ' + navigation + ': ' + userAgent);
+    console.log('Relay works: ' + userAgent);
     send(res, STATUS_OK, page('Relay works',
       '<p>The browser followed the relay back to the LAN.</p>' +
-      '<p>Forward: ' + escapeHtml(navigation) + '</p>' +
       '<p><small>' + escapeHtml(userAgent) + '</small></p>'));
     return;
   }
