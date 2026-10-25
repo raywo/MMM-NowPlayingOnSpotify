@@ -23,7 +23,8 @@
   ],
   "license": "MIT",
   "scripts": {
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test"
   },
   "bugs": {
     "url": "https://github.com/raywo/MMM-NowPlayingOnSpotify/issues"
