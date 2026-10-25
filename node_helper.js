@@ -19,9 +19,21 @@ const SpotifyAuthServer = require('./core/SpotifyAuthServer');
 const { resolveAuthAddress } = require('./core/LanAddress');
 
 const AuthRequiredError = SpotifyConnector.AuthRequiredError;
+const RateLimitError = SpotifyConnector.RateLimitError;
 
 const MS_PER_SECOND = 1000;
 const DEFAULT_UPDATE_INTERVAL_S = 1;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+
+// Idle polling: once nothing has played for a while, poll less often to spare
+// the Pi, the network and Spotify's rate limit, which counts per app.
+const DEFAULT_IDLE_AFTER_S = 30;
+const DEFAULT_IDLE_UPDATE_INTERVAL_S = 10;
+
+// Failures are reported on the mirror only once the shown data would be at
+// least this old before the next attempt; brief hiccups stay invisible.
+const STALE_AFTER_MS = 60 * MS_PER_SECOND;
 
 // Proactive re-auth warning: Spotify refresh tokens live ~6 months from the
 // original authorization; warn before the hard expiry so it is never a surprise.
@@ -54,6 +66,13 @@ module.exports = NodeHelper.create({
     this.pollTimer = null;
     this.inFlight = false;
     this.lastPayload = null;
+    // Start of the current stretch without playback, null while playing.
+    this.idleSince = null;
+    this.idle = false;
+    // Start of the current run of failed polls, null while polls succeed.
+    this.failingSince = null;
+    // Shown on the mirror while the data is stale: { reason, retryAt }.
+    this.unavailable = null;
   },
 
 
@@ -77,8 +96,8 @@ module.exports = NodeHelper.create({
     }
 
     // Browser reload during normal operation: show cached data immediately.
-    if (this.lastPayload) {
-      this.sendSocketNotification('RETRIEVED_SONG_DATA', this.lastPayload);
+    if (this.lastPayload || this.unavailable) {
+      this.sendSongData();
     }
 
     this.startPolling();
@@ -170,7 +189,10 @@ module.exports = NodeHelper.create({
       const authURL = this.authURLForWarning();
       const payload = this.buildPayload(data, authURL);
       this.lastPayload = payload;
-      this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
+      this.noteRecovery();
+      this.sendSongData();
+      this.updateIdleState(this.isPlaying(data));
+      delayMs = this.updateIntervalMs();
     } catch (error) {
       if (error instanceof AuthRequiredError) {
         this.inFlight = false;
@@ -178,10 +200,12 @@ module.exports = NodeHelper.create({
         return;
       }
       // Transient: keep last good data, retry later.
-      this.log('Transient error, keeping last data: ' + error.message);
       if (error.retryAfterMs) {
         delayMs = error.retryAfterMs;
       }
+      this.log('Transient error, retrying in ' + this.formatDelay(delayMs)
+        + ', keeping last data: ' + error.message);
+      this.noteFailure(error, delayMs);
     }
 
     this.inFlight = false;
@@ -335,9 +359,108 @@ module.exports = NodeHelper.create({
   },
 
 
+  noteRecovery: function () {
+    if (this.failingSince !== null) {
+      this.log('Spotify reachable again - showing current data.');
+    }
+    this.failingSince = null;
+    this.unavailable = null;
+  },
+
+
+  noteFailure: function (error, delayMs) {
+    const now = Date.now();
+    if (this.failingSince === null) {
+      this.failingSince = now;
+    }
+
+    if (now + delayMs - this.failingSince < STALE_AFTER_MS) {
+      return;
+    }
+
+    this.unavailable = {
+      reason: error instanceof RateLimitError ? 'RATE_LIMITED' : 'UNREACHABLE',
+      retryAt: now + delayMs
+    };
+    this.sendSongData();
+  },
+
+
+  /**
+   * Sends the last good data, marked as stale while Spotify is unavailable.
+   * Without any data yet, the stale report goes with a nothing-playing payload.
+   */
+  sendSongData: function () {
+    let payload = this.lastPayload;
+    if (this.unavailable) {
+      payload = Object.assign({}, payload || this.buildPayload(null, null), { unavailable: this.unavailable });
+    }
+    this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
+  },
+
+
+  /**
+   * Ads and podcast episodes arrive without an item but still play;
+   * they must not slow down polling for the song that follows.
+   */
+  isPlaying: function (data) {
+    return Boolean(data && data.is_playing);
+  },
+
+
+  /**
+   * Paused counts as idle: the mirror shows nothing new until playback
+   * resumes, and resuming is noticed within one idle interval.
+   */
+  updateIdleState: function (playing) {
+    if (playing) {
+      const wasIdle = this.idle;
+      this.idleSince = null;
+      this.idle = false;
+      if (wasIdle) {
+        this.log('Playback resumed - polling every ' + this.formatDelay(this.updateIntervalMs()) + '.');
+      }
+      return;
+    }
+
+    if (this.idleSince === null) {
+      this.idleSince = Date.now();
+    }
+
+    const idleAfterMs = (Number(this.config.idleAfter) || DEFAULT_IDLE_AFTER_S) * MS_PER_SECOND;
+    if (!this.idle && Date.now() - this.idleSince >= idleAfterMs) {
+      this.idle = true;
+      this.log('Nothing playing for ' + this.formatDelay(idleAfterMs)
+        + ' - polling every ' + this.formatDelay(this.updateIntervalMs()) + '.');
+    }
+  },
+
+
   updateIntervalMs: function () {
-    const seconds = Number(this.config.updatesEvery) || DEFAULT_UPDATE_INTERVAL_S;
-    return seconds * MS_PER_SECOND;
+    const activeSeconds = Number(this.config.updatesEvery) || DEFAULT_UPDATE_INTERVAL_S;
+    if (!this.idle) {
+      return activeSeconds * MS_PER_SECOND;
+    }
+
+    const idleSeconds = Number(this.config.idleUpdatesEvery) || DEFAULT_IDLE_UPDATE_INTERVAL_S;
+    return Math.max(activeSeconds, idleSeconds) * MS_PER_SECOND;
+  },
+
+
+  formatDelay: function (delayMs) {
+    const totalSeconds = Math.round(delayMs / MS_PER_SECOND);
+    if (totalSeconds < SECONDS_PER_MINUTE) {
+      return totalSeconds + ' s';
+    }
+
+    const totalMinutes = Math.round(totalSeconds / SECONDS_PER_MINUTE);
+    if (totalMinutes < MINUTES_PER_HOUR) {
+      return totalMinutes + ' min';
+    }
+
+    const hours = Math.floor(totalMinutes / MINUTES_PER_HOUR);
+    const minutes = totalMinutes % MINUTES_PER_HOUR;
+    return minutes ? hours + ' h ' + minutes + ' min' : hours + ' h';
   },
 
 

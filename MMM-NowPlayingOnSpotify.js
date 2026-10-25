@@ -16,6 +16,8 @@ Module.register('MMM-NowPlayingOnSpotify', {
 
     // user definable
     updatesEvery: 1,          // How often should the table be updated in s?
+    idleAfter: 30,            // Seconds without playback before polling slows down
+    idleUpdatesEvery: 10,     // Polling interval in s while nothing is playing
     showCoverArt: true,       // Do you want the cover art to be displayed?
     redirectURI: '',          // Whitelisted Spotify redirect URI for (re-)authorization
     authHost: '',             // Relay mode: mirror's LAN address, detected if empty

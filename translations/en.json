@@ -8,5 +8,7 @@
   "REAUTH_NO_LAN_ADDRESS": "The mirror's network address could not be detected. Set \"authHost\" in config.js.",
   "REAUTH_INVALID_AUTH_HOST": "\"authHost\" in config.js must be the mirror's private IPv4 address, e.g. 192.168.1.20.",
   "REAUTH_INVALID_AUTH_PORT": "\"authPort\" in config.js must be a port between 1 and 65535.",
-  "REAUTH_CONTAINER_NEEDS_AUTH_HOST": "The mirror runs in a container. Set \"authHost\" in config.js to the host's network address."
+  "REAUTH_CONTAINER_NEEDS_AUTH_HOST": "The mirror runs in a container. Set \"authHost\" in config.js to the host's network address.",
+  "STATUS_RATE_LIMITED": "Spotify is limiting requests – next attempt at {time}",
+  "STATUS_UNREACHABLE": "Spotify not reachable – retrying"
 }

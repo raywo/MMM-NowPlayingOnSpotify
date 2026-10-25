@@ -50,9 +50,36 @@ class NPOS_DomBuilder {
     if (showWarning) {
       wrapper.appendChild(this.getWarningBanner(authInfo));
     }
+    if (authInfo && authInfo.unavailable) {
+      wrapper.appendChild(this.getStatusBanner(authInfo.unavailable));
+    }
     wrapper.appendChild(content);
 
     return wrapper;
+  }
+
+  /**
+   * Tells that the shown data is stale. Only waiting helps, so the banner is
+   * deliberately calmer than the red re-authorization banners.
+   */
+  getStatusBanner(unavailable) {
+    let banner = document.createElement('div');
+    banner.className = 'NPOS_statusBanner';
+    banner.appendChild(document.createTextNode(this.getStatusText(unavailable)));
+
+    return banner;
+  }
+
+  getStatusText(unavailable) {
+    if (unavailable.reason === 'RATE_LIMITED') {
+      return this.translate('STATUS_RATE_LIMITED', { time: this.formatClockTime(unavailable.retryAt) });
+    }
+    return this.translate('STATUS_UNREACHABLE');
+  }
+
+  formatClockTime(timestamp) {
+    let language = typeof config !== 'undefined' ? config.language : undefined;
+    return new Date(timestamp).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
   }
 
   getWarningBanner(authInfo) {

@@ -8,8 +8,10 @@
  *
  *   - AuthRequiredError : the refresh token is dead (invalid_grant) or missing.
  *                         The user must re-authorize. Do NOT retry.
- *   - TransientError    : network / timeout / 5xx / 429 / unexpected. Keep the
+ *   - TransientError    : network / timeout / 5xx / unexpected. Keep the
  *                         last good data and retry on the next poll.
+ *   - RateLimitError    : a TransientError for HTTP 429; retryAfterMs carries
+ *                         Spotify's Retry-After, which may be hours.
  *   - null              : nothing is playing (HTTP 204).
  *   - <object>          : the raw Spotify player payload (HTTP 200).
  */
@@ -43,6 +45,14 @@ class TransientError extends Error {
     super(message);
     this.name = 'TransientError';
     this.retryAfterMs = retryAfterMs || DEFAULT_RETRY_AFTER_MS;
+  }
+}
+
+
+class RateLimitError extends TransientError {
+  constructor(message, retryAfterMs) {
+    super(message, retryAfterMs);
+    this.name = 'RateLimitError';
   }
 }
 
@@ -112,6 +122,10 @@ class SpotifyConnector {
       }
     }
 
+    if (response.status === HTTP_TOO_MANY_REQUESTS) {
+      throw new RateLimitError('Rate limited by Spotify (token refresh).', this._retryAfterMs(response));
+    }
+
     throw new TransientError('Token refresh failed with status ' + response.status);
   }
 
@@ -136,7 +150,7 @@ class SpotifyConnector {
     }
 
     if (response.status === HTTP_TOO_MANY_REQUESTS) {
-      throw new TransientError('Rate limited by Spotify.', this._retryAfterMs(response));
+      throw new RateLimitError('Rate limited by Spotify.', this._retryAfterMs(response));
     }
 
     if (response.status >= HTTP_SERVER_ERROR_MIN) {
@@ -187,3 +201,4 @@ class SpotifyConnector {
 module.exports = SpotifyConnector;
 module.exports.AuthRequiredError = AuthRequiredError;
 module.exports.TransientError = TransientError;
+module.exports.RateLimitError = RateLimitError;

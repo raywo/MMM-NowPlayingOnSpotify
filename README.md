@@ -108,6 +108,8 @@ Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own des
 | `authPort` | Port the module listens on in your local network during authorization. Default: `8888`. Only used with the relay page. |
 | `showCoverArt` | Show the album cover. Default: `true` |
 | `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
+| `idleAfter` | Seconds without playback – nothing playing or paused – after which the module queries Spotify less often. Default: `30`. |
+| `idleUpdatesEvery` | Interval in seconds for querying Spotify while nothing is playing or playback is paused. Default: `10`. When playback starts, the display follows within this interval and then switches back to `updatesEvery`. Never shorter than `updatesEvery`; set it to the same value to query at a constant rate. |
 
 ## Customizing the appearance
 
@@ -119,6 +121,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
+| `.NPOS_statusBanner` | Notice that Spotify limits requests or cannot be reached; the module then keeps showing the last known song |
 
 For example, to shrink the cover and hide the logo when nothing is playing:
 
