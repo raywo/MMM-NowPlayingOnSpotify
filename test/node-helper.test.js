@@ -130,6 +130,45 @@ test('the payload carries no reason outside the warning window', () => {
   assert.equal(payload.authUnavailableReason, null);
 });
 
+function episodeData(images, showImages) {
+  return {
+    item: {
+      type: 'episode',
+      name: 'Episode',
+      images: images,
+      duration_ms: 3600 * MS_PER_SECOND,
+      show: { name: 'Show', publisher: 'Publisher', images: showImages }
+    },
+    currently_playing_type: 'episode',
+    progress_ms: 60 * MS_PER_SECOND,
+    is_playing: true,
+    device: { name: 'Device' }
+  };
+}
+
+test('shows a podcast episode with its show and publisher', () => {
+  helper = createHelper({});
+  const cover = { url: 'episode.jpg', width: 300 };
+
+  const payload = helper.buildPayload(episodeData([cover], []), null);
+
+  assert.equal(payload.noSong, undefined);
+  assert.equal(payload.songTitle, 'Episode');
+  assert.equal(payload.artist, 'Publisher');
+  assert.equal(payload.album, 'Show');
+  assert.equal(payload.imgURL, 'episode.jpg');
+  assert.equal(payload.titleLength, 3600 * MS_PER_SECOND);
+  assert.equal(payload.progress, 60 * MS_PER_SECOND);
+});
+
+test('takes the show cover when the episode has none', () => {
+  helper = createHelper({});
+
+  const payload = helper.buildPayload(episodeData([], [{ url: 'show.jpg', width: 300 }]), null);
+
+  assert.equal(payload.imgURL, 'show.jpg');
+});
+
 function songData(isPlaying) {
   return {
     item: {
@@ -185,7 +224,7 @@ test('a paused song counts as nothing playing', async () => {
   assert.equal(helper.delays.at(-1), 10000);
 });
 
-test('an ad or a podcast episode without track data still counts as playing', async () => {
+test('an ad without track data still counts as playing', async () => {
   mock.timers.enable({ apis: ['Date'], now: 0 });
   const adBreak = { item: null, currently_playing_type: 'ad', is_playing: true };
   helper = createPollingHelper(IDLE_CONFIG, [adBreak, adBreak]);

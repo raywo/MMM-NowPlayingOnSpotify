@@ -17,7 +17,8 @@
  */
 
 const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
-const API_PLAYER_ENDPOINT = 'https://api.spotify.com/v1/me/player';
+// Without additional_types, podcast episodes arrive without an item.
+const API_PLAYER_ENDPOINT = 'https://api.spotify.com/v1/me/player?additional_types=track,episode';
 
 const HTTP_TIMEOUT_MS = 15 * 1000;
 // Refresh a little before the access token actually expires to avoid races.
