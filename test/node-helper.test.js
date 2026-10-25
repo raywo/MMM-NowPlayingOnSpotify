@@ -342,3 +342,68 @@ test('keeps the report across a browser reload', async () => {
 
   assert.equal(lastSongData(helper).unavailable.reason, 'RATE_LIMITED');
 });
+
+const HIDE_CONFIG = Object.assign({ hideAfter: 60 }, IDLE_CONFIG);
+
+test('asks the mirror to hide the module once nothing has played for hideAfter seconds', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [null, null, null]);
+
+  await helper.poll();
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+  mock.timers.tick(59 * MS_PER_SECOND);
+  await helper.poll();
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+  mock.timers.tick(1 * MS_PER_SECOND);
+  await helper.poll();
+  assert.equal(lastSongData(helper).hideWhileIdle, true);
+});
+
+test('hides the module after a paused song too', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [songData(false), songData(false)]);
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).hideWhileIdle, true);
+});
+
+test('shows the module again as soon as something plays', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [null, null, songData(true)]);
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+});
+
+test('never hides the module without hideAfter', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(IDLE_CONFIG, [null, null]);
+
+  await helper.poll();
+  mock.timers.tick(24 * 60 * 60 * MS_PER_SECOND);
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+});
+
+test('keeps the module hidden across a browser reload', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [null, null]);
+  helper.initOnce = () => {};
+  helper.startPolling = () => {};
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+  helper.notifications = [];
+  helper.handleConnect(HIDE_CONFIG);
+
+  assert.equal(lastSongData(helper).hideWhileIdle, true);
+});

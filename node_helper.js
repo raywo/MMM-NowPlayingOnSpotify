@@ -190,8 +190,8 @@ module.exports = NodeHelper.create({
       const payload = this.buildPayload(data, authURL);
       this.lastPayload = payload;
       this.noteRecovery();
-      this.sendSongData();
       this.updateIdleState(this.isPlaying(data));
+      this.sendSongData();
       delayMs = this.updateIntervalMs();
     } catch (error) {
       if (error instanceof AuthRequiredError) {
@@ -389,11 +389,14 @@ module.exports = NodeHelper.create({
   /**
    * Sends the last good data, marked as stale while Spotify is unavailable.
    * Without any data yet, the stale report goes with a nothing-playing payload.
+   * Computed per send so a browser reload restores whether the module hides.
    */
   sendSongData: function () {
-    let payload = this.lastPayload;
+    let payload = Object.assign({}, this.lastPayload || this.buildPayload(null, null), {
+      hideWhileIdle: this.shouldHideWhileIdle()
+    });
     if (this.unavailable) {
-      payload = Object.assign({}, payload || this.buildPayload(null, null), { unavailable: this.unavailable });
+      payload.unavailable = this.unavailable;
     }
     this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
   },
@@ -433,6 +436,18 @@ module.exports = NodeHelper.create({
       this.log('Nothing playing for ' + this.formatDelay(idleAfterMs)
         + ' - polling every ' + this.formatDelay(this.updateIntervalMs()) + '.');
     }
+  },
+
+
+  /**
+   * hideAfter is opt-in: without it, the module never hides on its own.
+   */
+  shouldHideWhileIdle: function () {
+    const hideAfterSeconds = Number(this.config.hideAfter) || 0;
+    if (hideAfterSeconds <= 0 || this.idleSince === null) {
+      return false;
+    }
+    return Date.now() - this.idleSince >= hideAfterSeconds * MS_PER_SECOND;
   },
 
 
