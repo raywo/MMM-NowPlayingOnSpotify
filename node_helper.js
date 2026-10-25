@@ -29,6 +29,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_LIFETIME_DAYS = 182;
 const REAUTH_WARNING_LEAD_DAYS = 14;
 
+// While authorization is pending and the auth server could not start (e.g. no
+// LAN address yet at boot), try again at this interval.
+const AUTH_RETRY_INTERVAL_MS = 30 * MS_PER_SECOND;
+
 // Album cover selection: prefer a mid-sized image for the mirror.
 const COVER_MIN_WIDTH = 240;
 const COVER_MAX_WIDTH = 350;
@@ -44,6 +48,7 @@ module.exports = NodeHelper.create({
     this.authServer = null;
     // Translation key explaining why authServer is null.
     this.authUnavailableReason = null;
+    this.authRetryTimer = null;
 
     this.authRequired = false;
     this.pollTimer = null;
@@ -196,6 +201,31 @@ module.exports = NodeHelper.create({
 
     this.log('Re-authorization required - poll loop paused, auth server active.');
     this.sendAuthRequired();
+    this.scheduleAuthRetry();
+  },
+
+
+  /**
+   * The poll loop is paused while authorization is pending, so nothing else
+   * would retry a failed auth server start. Without a redirectURI there is
+   * nothing to retry.
+   */
+  scheduleAuthRetry: function () {
+    if (!this.authRequired || this.authServer || this.authRetryTimer || !this.config.redirectURI) {
+      return;
+    }
+    this.authRetryTimer = setTimeout(() => {
+      this.authRetryTimer = null;
+      if (!this.authRequired) {
+        return;
+      }
+      this.ensureAuthServerRunning();
+      if (this.authServer) {
+        this.sendAuthRequired();
+      } else {
+        this.scheduleAuthRetry();
+      }
+    }, AUTH_RETRY_INTERVAL_MS);
   },
 
 
@@ -226,6 +256,11 @@ module.exports = NodeHelper.create({
 
   handleAuthSuccess: function () {
     this.authRequired = false;
+
+    if (this.authRetryTimer) {
+      clearTimeout(this.authRetryTimer);
+      this.authRetryTimer = null;
+    }
 
     if (this.authServer && this.authServer.isRunning()) {
       this.authServer.stop();
