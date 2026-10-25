@@ -1,4 +1,4 @@
-name: Lint
+name: Lint and test
 
 on:
   push:
@@ -17,3 +17,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm test
