@@ -17,7 +17,9 @@ Module.register('MMM-NowPlayingOnSpotify', {
     // user definable
     updatesEvery: 1,          // How often should the table be updated in s?
     showCoverArt: true,       // Do you want the cover art to be displayed?
-    redirectURI: ''           // Whitelisted Spotify redirect URI for (re-)authorization
+    redirectURI: '',          // Whitelisted Spotify redirect URI for (re-)authorization
+    authHost: '',             // Relay mode: mirror's LAN address, detected if empty
+    authPort: 8888            // Relay mode: port of the authorization server
   },
 
 
@@ -63,6 +65,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
 
   getScripts: function () {
     return [
+      this.file('vendor/qrcode-generator/qrcode.js'),
       this.file('core/NPOS_DomBuilder.js')
     ];
   },

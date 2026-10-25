@@ -1,12 +1,19 @@
 /* MMM-NowPlayingOnSpotify - NPOS_DomBuilder
  *
  * Builds the module DOM. Runs in the browser (frontend). No external
- * dependencies: durations are formatted locally instead of via moment.
+ * dependencies: durations are formatted locally instead of via moment. The QR
+ * code comes from the vendored qrcode-generator (global `qrcode`).
  */
 
 const NPOS_SECONDS_PER_MINUTE = 60;
 const NPOS_MINUTES_PER_HOUR = 60;
 const NPOS_MS_PER_SECOND = 1000;
+const NPOS_SVG_NS = 'http://www.w3.org/2000/svg';
+// Type 0 picks the smallest QR version that fits; M survives minor glare.
+const NPOS_QR_TYPE_AUTO = 0;
+const NPOS_QR_ERROR_CORRECTION = 'M';
+// Scanners need a light margin of four modules around the code.
+const NPOS_QR_QUIET_ZONE = 4;
 
 class NPOS_DomBuilder {
 
@@ -21,7 +28,7 @@ class NPOS_DomBuilder {
       ? this.getNothingIsPlayingContent()
       : this.getPlayingContent(context);
 
-    return this.getWrapper(content, context.reauthWarning, context.authURL);
+    return this.getWrapper(content, context.reauthWarning, context.authURL, context.authRelay);
   }
 
   getInitDom(loadingText) {
@@ -36,19 +43,19 @@ class NPOS_DomBuilder {
     return wrapper;
   }
 
-  getWrapper(content, showWarning, authURL) {
+  getWrapper(content, showWarning, authURL, authRelay) {
     let wrapper = document.createElement('div');
     wrapper.className = 'small';
 
     if (showWarning) {
-      wrapper.appendChild(this.getWarningBanner(authURL));
+      wrapper.appendChild(this.getWarningBanner(authURL, authRelay));
     }
     wrapper.appendChild(content);
 
     return wrapper;
   }
 
-  getWarningBanner(authURL) {
+  getWarningBanner(authURL, authRelay) {
     let banner = document.createElement('div');
     banner.className = 'NPOS_reauthBanner NPOS_reauthBanner--warning';
 
@@ -58,7 +65,7 @@ class NPOS_DomBuilder {
     banner.appendChild(title);
 
     if (authURL) {
-      banner.appendChild(this.getURLBlock(authURL));
+      banner.appendChild(this.getURLBlock(authURL, authRelay));
     }
 
     return banner;
@@ -74,32 +81,78 @@ class NPOS_DomBuilder {
     content.appendChild(title);
 
     if (authInfo && authInfo.authURL) {
-      content.appendChild(this.getURLBlock(authInfo.authURL));
+      content.appendChild(this.getURLBlock(authInfo.authURL, authInfo.authRelay));
     } else {
       let text = document.createElement('div');
       text.className = 'NPOS_reauthText';
-      text.innerHTML = this.translate('REAUTH_NO_REDIRECT');
+      text.innerHTML = this.translate((authInfo && authInfo.authUnavailableReason) || 'REAUTH_NO_REDIRECT');
       content.appendChild(text);
     }
 
     return content;
   }
 
-  getURLBlock(authURL) {
+  getURLBlock(authURL, authRelay) {
     let block = document.createElement('div');
 
     let label = document.createElement('div');
     label.className = 'NPOS_reauthText';
-    label.innerHTML = this.translate('REAUTH_OPEN_URL');
+    label.innerHTML = this.translate(authRelay ? 'REAUTH_SCAN_QR' : 'REAUTH_OPEN_URL');
+    block.appendChild(label);
+
+    if (authRelay) {
+      block.appendChild(this.getQRCode(authURL));
+    }
 
     let url = document.createElement('div');
     url.className = 'NPOS_reauthURL';
-    url.innerHTML = authURL;
-
-    block.appendChild(label);
+    url.textContent = authURL;
     block.appendChild(url);
 
+    if (authRelay) {
+      let hint = document.createElement('div');
+      hint.className = 'NPOS_reauthHint xsmall';
+      hint.innerHTML = this.translate('REAUTH_SAME_NETWORK');
+      block.appendChild(hint);
+    }
+
     return block;
+  }
+
+  getQRCode(text) {
+    let qr = qrcode(NPOS_QR_TYPE_AUTO, NPOS_QR_ERROR_CORRECTION);
+    qr.addData(text);
+    qr.make();
+
+    let modules = qr.getModuleCount();
+    let size = modules + 2 * NPOS_QR_QUIET_ZONE;
+
+    let svg = document.createElementNS(NPOS_SVG_NS, 'svg');
+    svg.setAttribute('class', 'NPOS_reauthQR');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('shape-rendering', 'crispEdges');
+
+    let background = document.createElementNS(NPOS_SVG_NS, 'rect');
+    background.setAttribute('width', size);
+    background.setAttribute('height', size);
+    background.setAttribute('fill', '#fff');
+    svg.appendChild(background);
+
+    let path = '';
+    for (let row = 0; row < modules; row++) {
+      for (let col = 0; col < modules; col++) {
+        if (qr.isDark(row, col)) {
+          path += 'M' + (col + NPOS_QR_QUIET_ZONE) + ' ' + (row + NPOS_QR_QUIET_ZONE) + 'h1v1h-1z';
+        }
+      }
+    }
+
+    let dark = document.createElementNS(NPOS_SVG_NS, 'path');
+    dark.setAttribute('d', path);
+    dark.setAttribute('fill', '#000');
+    svg.appendChild(dark);
+
+    return svg;
   }
 
   getInitializingContent(loadingText) {

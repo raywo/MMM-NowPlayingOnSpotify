@@ -3,7 +3,7 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["node_modules/**"]
+    ignores: ["node_modules/**", "vendor/**"]
   },
   js.configs.recommended,
   {
@@ -33,6 +33,12 @@ export default [
   },
   {
     files: ["core/NPOS_DomBuilder.js"],
+    languageOptions: {
+      globals: {
+        // Loaded via getScripts() from vendor/qrcode-generator.
+        qrcode: "readonly"
+      }
+    },
     rules: {
       "no-unused-vars": ["error", { varsIgnorePattern: "^NPOS_DomBuilder$" }]
     }

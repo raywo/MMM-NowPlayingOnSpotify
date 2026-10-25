@@ -7,14 +7,21 @@
  * after the refresh token expires.
  *
  * It is started by node_helper only when authorization is required. The user
- * opens the server URL in a browser on the mirror itself or through an SSH
- * tunnel, signs in at Spotify, and Spotify redirects back to /callback on this
- * server. The freshly obtained tokens are written to the TokenStore and
- * onSuccess() is invoked so the module recovers in-process, without a restart.
+ * opens the server URL, is redirected to Spotify, signs in, and Spotify
+ * redirects back to /callback on this server. The freshly obtained tokens are
+ * written to the TokenStore and onSuccess() is invoked so the module recovers
+ * in-process, without a restart.
  *
  * The redirect URI must match the value whitelisted in the Spotify app
- * dashboard. Spotify accepts http only for loopback addresses, so the redirect
- * URI is http://127.0.0.1:<port>/callback; a LAN IP or hostname is rejected.
+ * dashboard. Spotify accepts http only for loopback addresses, which gives two
+ * modes:
+ *
+ * - Loopback: redirectURI is http://127.0.0.1:<port>/callback. The server
+ *   binds loopback only; the browser runs on the mirror or uses an SSH tunnel.
+ * - Relay: redirectURI is an https relay page (docs/callback/). The server
+ *   listens on the LAN at lanHost:lanPort and puts that address into `state`;
+ *   the relay forwards the phone's browser back here. The state format must
+ *   match docs/callback/relay.js.
  */
 
 const http = require('http');
@@ -27,11 +34,15 @@ const SCOPES = 'user-read-playback-state user-read-currently-playing';
 const HTTP_TIMEOUT_MS = 15 * 1000;
 const STATE_BYTES = 16;
 const DEFAULT_HTTP_PORT = 80;
-// Bind loopback only: the redirect URI is a loopback address, and remote access
-// goes through an SSH tunnel to the Pi's localhost. Not exposed on the LAN.
-const LISTEN_HOST = '127.0.0.1';
+// Loopback mode binds loopback only: remote access goes through an SSH tunnel
+// to the Pi's localhost. Relay mode has to be reachable from a phone.
+const LOOPBACK_HOST = '127.0.0.1';
+const LAN_HOST = '0.0.0.0';
+// Fixed by the relay page, which always forwards to this path.
+const RELAY_CALLBACK_PATH = '/callback';
 
 const STATUS_OK = 200;
+const STATUS_FOUND = 302;
 const STATUS_BAD_REQUEST = 400;
 const STATUS_NOT_FOUND = 404;
 const STATUS_SERVER_ERROR = 500;
@@ -46,6 +57,8 @@ module.exports = class SpotifyAuthServer {
    * @param {TokenStore} options.store
    * @param {function} options.onSuccess Called after tokens are stored.
    * @param {function} [options.log] Logger (message) => void.
+   * @param {string} [options.lanHost] Relay mode: the mirror's LAN address.
+   * @param {number} [options.lanPort] Relay mode: port to listen on.
    */
   constructor(options) {
     this.credentials = options.credentials;
@@ -55,16 +68,42 @@ module.exports = class SpotifyAuthServer {
     this.log = options.log || function () {};
 
     const url = new URL(this.redirectURI);
-    this.port = url.port ? Number(url.port) : DEFAULT_HTTP_PORT;
-    this.callbackPath = url.pathname;
-    this.entryURL = url.origin + '/';
+    this.relay = SpotifyAuthServer.isRelayURI(this.redirectURI);
+
+    if (this.relay) {
+      this.lanHost = options.lanHost;
+      this.port = options.lanPort;
+      this.listenHost = LAN_HOST;
+      this.callbackPath = RELAY_CALLBACK_PATH;
+      this.entryURL = 'http://' + this.lanHost + ':' + this.port + '/';
+    } else {
+      this.port = url.port ? Number(url.port) : DEFAULT_HTTP_PORT;
+      this.listenHost = LOOPBACK_HOST;
+      this.callbackPath = url.pathname;
+      this.entryURL = url.origin + '/';
+    }
 
     this.server = null;
     this.pendingState = null;
   }
 
+  /**
+   * @param {string} redirectURI
+   * @returns {boolean} True if the URI points to an https relay page.
+   */
+  static isRelayURI(redirectURI) {
+    return new URL(redirectURI).protocol === 'https:';
+  }
+
   isRunning() {
     return this.server !== null;
+  }
+
+  /**
+   * @returns {boolean} True if the entry URL is meant to be opened on a phone.
+   */
+  isRelayMode() {
+    return this.relay;
   }
 
   /**
@@ -90,7 +129,7 @@ module.exports = class SpotifyAuthServer {
       }
     });
     this.server = server;
-    this.server.listen(this.port, LISTEN_HOST, () => {
+    this.server.listen(this.port, this.listenHost, () => {
       this.log('Authorization server listening on ' + this.entryURL);
     });
   }
@@ -128,7 +167,7 @@ module.exports = class SpotifyAuthServer {
   }
 
   _handleRoot(res) {
-    this.pendingState = randomBytes(STATE_BYTES).toString('hex');
+    this.pendingState = this._newState();
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -137,12 +176,26 @@ module.exports = class SpotifyAuthServer {
       redirect_uri: this.redirectURI,
       state: this.pendingState
     });
-    const authorizeURL = AUTHORIZE_ENDPOINT + '?' + params.toString();
 
-    const bodyHtml =
-      '<p>Authorize MagicMirror to read your Spotify playback.</p>' +
-      '<p><a class="btn" href="' + authorizeURL + '">Log in with Spotify</a></p>';
-    this._sendHtml(res, STATUS_OK, this._page('Authorize MagicMirror', bodyHtml));
+    // Each visit issues a new state, so a cached redirect would carry a stale one.
+    res.writeHead(STATUS_FOUND, {
+      'Location': AUTHORIZE_ENDPOINT + '?' + params.toString(),
+      'Cache-Control': 'no-store'
+    });
+    res.end();
+  }
+
+  _newState() {
+    if (!this.relay) {
+      return randomBytes(STATE_BYTES).toString('hex');
+    }
+
+    const payload = {
+      h: this.lanHost,
+      p: this.port,
+      n: randomBytes(STATE_BYTES).toString('base64url')
+    };
+    return Buffer.from(JSON.stringify(payload)).toString('base64url');
   }
 
   async _handleCallback(requestUrl, res) {
@@ -229,8 +282,6 @@ module.exports = class SpotifyAuthServer {
       '<style>' +
       'body{font-family:sans-serif;background:#191414;color:#fff;margin:0;padding:2rem;text-align:center;}' +
       'h1{color:#1db954;}' +
-      '.btn{display:inline-block;margin-top:1rem;padding:0.8rem 1.6rem;background:#1db954;color:#fff;' +
-      'text-decoration:none;border-radius:2rem;font-weight:bold;}' +
       '</style></head><body>' +
       '<h1>' + title + '</h1>' + bodyHtml +
       '</body></html>';

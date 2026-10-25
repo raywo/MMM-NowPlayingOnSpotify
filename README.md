@@ -30,10 +30,10 @@ Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com
 Add this **Redirect URI** to the app:
 
 ```
-http://127.0.0.1:8888/callback
+https://raywo.github.io/MMM-NowPlayingOnSpotify/callback/
 ```
 
-Spotify accepts `http` redirect URIs only for the loopback address `127.0.0.1`. `localhost`, a hostname or a LAN IP do not work: some are accepted in the dashboard and then rejected during login. The only part you may change is the port – then change it in `config.js` as well.
+This is a static relay page. After you log in at Spotify, it sends your phone's browser straight back to the mirror in your local network. It only ever sees the one-time authorization code, which is worthless without your Client Secret; the tokens never leave the mirror. You can host your own copy of `docs/callback/` and register that URI instead.
 
 ### Step 2 – Configure the module
 
@@ -44,7 +44,7 @@ Spotify accepts `http` redirect URIs only for the loopback address `127.0.0.1`. 
   config: {
     clientID: "<YOUR_CLIENT_ID>",
     clientSecret: "<YOUR_CLIENT_SECRET>",
-    redirectURI: "http://127.0.0.1:8888/callback"
+    redirectURI: "https://raywo.github.io/MMM-NowPlayingOnSpotify/callback/"
   }
 }
 ```
@@ -53,18 +53,30 @@ Tokens do not go into `config.js`. The module obtains them in step 3 and stores 
 
 ### Step 3 – Authorize
 
-On a fresh installation there are no tokens yet, so the mirror shows a red authorization banner right away. That is expected. The same steps renew the authorization every six months.
+On a fresh installation there are no tokens yet, so the mirror shows a red authorization banner with a QR code right away. That is expected. The same steps renew the authorization every six months.
 
-The redirect URI is a loopback address, so the browser you log in with must reach port 8888 on the mirror itself:
+1. Scan the QR code with your phone.
+2. Log in at Spotify and allow access.
+3. Your phone returns to the mirror, the module stores the tokens and starts displaying – no restart needed.
+
+**Your phone must be in the same network as the mirror.** The mirror does not need to be reachable from the internet and needs no port forwarding: the last step is a request from your phone to the mirror. It fails when the phone is on mobile data, in a guest network, or when the router isolates Wi-Fi clients from each other, as some mesh systems do.
+
+While the banner is shown, the module listens on port 8888 in your local network and accepts nothing but the answer to the login it started.
+
+If the QR code shows a wrong address – for example with several network interfaces or in Docker – set `authHost` to the private IPv4 address your phone can reach, e.g. `192.168.1.20`. A hostname does not work: the relay page forwards to private IPv4 addresses only. If port 8888 is taken, set `authPort`.
+
+### Alternative: authorize without the relay page
+
+If you do not want to use the relay page, register `http://127.0.0.1:8888/callback` as redirect URI and use it in `config.js`. Spotify accepts `http` redirect URIs only for the loopback address `127.0.0.1`, so the browser you log in with must reach port 8888 on the mirror itself:
 
 1. On another computer, open an SSH tunnel to the mirror and keep it open:
    ```bash
    ssh -L 8888:127.0.0.1:8888 pi@<mirror-ip>
    ```
-2. In a browser on that computer, open `http://127.0.0.1:8888` and click **Log in with Spotify**.
-3. Spotify redirects back through the tunnel, the module stores the tokens and starts displaying – no restart needed.
+2. In a browser on that computer, open `http://127.0.0.1:8888` and log in at Spotify.
+3. Spotify redirects back through the tunnel, the module stores the tokens and starts displaying.
 
-Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own desktop.
+Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own desktop. `localhost`, a hostname or a LAN IP do not work as redirect URI: some are accepted in the dashboard and then rejected during login. The only part you may change is the port.
 
 ## Configuration options
 
@@ -72,7 +84,9 @@ Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own des
 |--------|-------------|
 | `clientID` | **Required.** The Client ID of your Spotify app. |
 | `clientSecret` | **Required.** The Client Secret of your Spotify app. |
-| `redirectURI` | **Required.** The redirect URI registered in your Spotify app. The module's authorization server listens on its port. Without it, the module cannot be (re-)authorized. |
+| `redirectURI` | **Required.** The redirect URI registered in your Spotify app. An `https` URI uses the relay page and the QR code; `http://127.0.0.1:<port>/callback` uses the loopback flow on that port. Without it, the module cannot be (re-)authorized. |
+| `authHost` | The mirror's private IPv4 address in your local network, shown in the QR code. Default: detected automatically. Only used with the relay page. |
+| `authPort` | Port the module listens on in your local network during authorization. Default: `8888`. Only used with the relay page. |
 | `showCoverArt` | Show the album cover. Default: `true` |
 | `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
 
@@ -127,6 +141,8 @@ Version 1 kept `accessToken` and `refreshToken` in `config.js`. Version 2 moves 
 1. Remove `accessToken` and `refreshToken` from `config.js`.
 2. Add `redirectURI` to `config.js` and register the same URI in your Spotify app (see step 1). Without it, the module cannot renew the authorization when the refresh token expires.
 
+If you already use `http://127.0.0.1:8888/callback`, nothing changes for you. To switch to the QR code, register the relay URI from step 1 in your Spotify app and set it as `redirectURI`.
+
 The two-week warning is not available for tokens taken over from version 1, because their age is unknown. You see the banner only when they expire; after that re-authorization the warning works as usual.
 
 ## Localization
@@ -149,3 +165,5 @@ Version 2 – token expiry handling, token store, integrated authorization serve
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+The QR code is drawn with [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase, included in `vendor/` under the MIT license.

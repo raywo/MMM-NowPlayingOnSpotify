@@ -35,6 +35,18 @@
   margin-top: 0.3em;
 }
 
+.NPOS_reauthQR {
+  display: block;
+  width: 8em;
+  height: 8em;
+  margin: 0.5em auto 0;
+}
+
+.NPOS_reauthHint {
+  font-weight: normal;
+  margin-top: 0.5em;
+}
+
 .NPOS_initContent {
   background-image: url("../img/background_icon.png");
   display: table;

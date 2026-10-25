@@ -16,6 +16,7 @@ const NodeHelper = require('node_helper');
 const SpotifyConnector = require('./core/SpotifyConnector');
 const TokenStore = require('./core/TokenStore');
 const SpotifyAuthServer = require('./core/SpotifyAuthServer');
+const { resolveAuthAddress } = require('./core/LanAddress');
 
 const AuthRequiredError = SpotifyConnector.AuthRequiredError;
 
@@ -38,8 +39,11 @@ module.exports = NodeHelper.create({
   start: function () {
     this.config = null;
     this.store = null;
+    this.credentials = null;
     this.connector = null;
     this.authServer = null;
+    // Translation key explaining why authServer is null.
+    this.authUnavailableReason = null;
 
     this.authRequired = false;
     this.pollTimer = null;
@@ -81,7 +85,7 @@ module.exports = NodeHelper.create({
       return;
     }
 
-    const credentials = {
+    this.credentials = {
       clientID: this.config.clientID,
       clientSecret: this.config.clientSecret
     };
@@ -90,19 +94,46 @@ module.exports = NodeHelper.create({
     this.store.load();
     this.store.seedFromConfig(this.config);
 
-    this.connector = new SpotifyConnector(credentials, this.store);
+    this.connector = new SpotifyConnector(this.credentials, this.store);
 
-    if (this.config.redirectURI) {
-      this.authServer = new SpotifyAuthServer({
-        credentials: credentials,
-        redirectURI: this.config.redirectURI,
-        store: this.store,
-        onSuccess: () => this.handleAuthSuccess(),
-        log: (message) => this.log(message)
-      });
-    } else {
+    if (!this.config.redirectURI) {
       this.log('No redirectURI configured - re-authorization flow is unavailable.');
+      this.authUnavailableReason = 'REAUTH_NO_REDIRECT';
     }
+  },
+
+
+  /**
+   * Created only when it is about to start: in relay mode the LAN address goes
+   * into the QR code, and the mirror may have had none at startup or a
+   * different one since. Do not create it once in initOnce().
+   */
+  createAuthServer: function () {
+    const redirectURI = this.config.redirectURI;
+    const options = {
+      credentials: this.credentials,
+      redirectURI: redirectURI,
+      store: this.store,
+      onSuccess: () => this.handleAuthSuccess(),
+      log: (message) => this.log(message)
+    };
+
+    if (SpotifyAuthServer.isRelayURI(redirectURI)) {
+      const address = resolveAuthAddress(this.config);
+      if (address.error) {
+        // Called on every poll during the warning window: log changes only.
+        if (this.authUnavailableReason !== address.error) {
+          this.log(address.message);
+        }
+        this.authUnavailableReason = address.error;
+        return null;
+      }
+      options.lanHost = address.host;
+      options.lanPort = address.port;
+    }
+
+    this.authUnavailableReason = null;
+    return new SpotifyAuthServer(options);
   },
 
 
@@ -169,7 +200,12 @@ module.exports = NodeHelper.create({
 
 
   ensureAuthServerRunning: function () {
-    if (this.authServer && !this.authServer.isRunning()) {
+    if (!this.config.redirectURI || (this.authServer && this.authServer.isRunning())) {
+      return;
+    }
+
+    this.authServer = this.createAuthServer();
+    if (this.authServer) {
       this.authServer.start();
     }
   },
@@ -202,8 +238,15 @@ module.exports = NodeHelper.create({
 
   sendAuthRequired: function () {
     this.sendSocketNotification('SPOTIFY_AUTH_REQUIRED', {
-      authURL: this.authServer ? this.authServer.getEntryURL() : null
+      authURL: this.authServer ? this.authServer.getEntryURL() : null,
+      authRelay: this.isAuthRelay(),
+      authUnavailableReason: this.authUnavailableReason
     });
+  },
+
+
+  isAuthRelay: function () {
+    return this.authServer ? this.authServer.isRelayMode() : false;
   },
 
 
@@ -215,8 +258,10 @@ module.exports = NodeHelper.create({
     const reauthWarning = this.isReauthWarningDue();
     const warnURL = reauthWarning ? (authURL || null) : null;
 
+    const authRelay = this.isAuthRelay();
+
     if (!data || !data.item) {
-      return { noSong: true, reauthWarning: reauthWarning, authURL: warnURL };
+      return { noSong: true, reauthWarning: reauthWarning, authURL: warnURL, authRelay: authRelay };
     }
 
     return {
@@ -229,7 +274,8 @@ module.exports = NodeHelper.create({
       isPlaying: data.is_playing,
       deviceName: data.device ? data.device.name : '',
       reauthWarning: reauthWarning,
-      authURL: warnURL
+      authURL: warnURL,
+      authRelay: authRelay
     };
   },
 
