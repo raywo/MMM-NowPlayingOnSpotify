@@ -169,6 +169,39 @@ test('takes the show cover when the episode has none', () => {
   assert.equal(payload.imgURL, 'show.jpg');
 });
 
+test('takes the widest album cover Spotify offers', () => {
+  helper = createHelper({});
+  const data = songData(true);
+  data.item.album.images = [
+    { url: 'medium.jpg', width: 300 },
+    { url: 'large.jpg', width: 640 },
+    { url: 'small.jpg', width: 64 }
+  ];
+
+  const payload = helper.buildPayload(data, null);
+
+  assert.equal(payload.imgURL, 'large.jpg');
+});
+
+test('takes the widest episode cover Spotify offers', () => {
+  helper = createHelper({});
+  const images = [{ url: 'small.jpg', width: 64 }, { url: 'large.jpg', width: 640 }];
+
+  const payload = helper.buildPayload(episodeData(images, []), null);
+
+  assert.equal(payload.imgURL, 'large.jpg');
+});
+
+test('takes the first cover when Spotify gives no widths', () => {
+  helper = createHelper({});
+  const data = songData(true);
+  data.item.album.images = [{ url: 'first.jpg', width: null }, { url: 'second.jpg', width: null }];
+
+  const payload = helper.buildPayload(data, null);
+
+  assert.equal(payload.imgURL, 'first.jpg');
+});
+
 function songData(isPlaying) {
   return {
     item: {
