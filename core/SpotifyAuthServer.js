@@ -79,8 +79,17 @@ module.exports = class SpotifyAuthServer {
       return;
     }
 
-    this.server = http.createServer((req, res) => this._handle(req, res));
-    this.server.on('error', (err) => this.log('Auth server error: ' + err.message));
+    const server = http.createServer((req, res) => this._handle(req, res));
+    // A failed bind (e.g. EADDRINUSE) must not leave the server marked as
+    // running, otherwise start() is never retried. The identity check keeps a
+    // late error of a stopped server from clearing its successor.
+    server.on('error', (err) => {
+      this.log('Auth server error on port ' + this.port + ': ' + err.message);
+      if (this.server === server) {
+        this.server = null;
+      }
+    });
+    this.server = server;
     this.server.listen(this.port, LISTEN_HOST, () => {
       this.log('Authorization server listening on ' + this.entryURL);
     });

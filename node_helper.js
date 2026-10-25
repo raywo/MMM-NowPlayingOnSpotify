@@ -60,7 +60,9 @@ module.exports = NodeHelper.create({
     this.initOnce();
 
     // Browser reload while re-authorization is pending: keep the state, re-notify.
+    // Restart the auth server in case its earlier bind failed.
     if (this.authRequired) {
+      this.ensureAuthServerRunning();
       this.sendAuthRequired();
       return;
     }
