@@ -501,8 +501,8 @@ module.exports = NodeHelper.create({
 
 
   /**
-   * The widest cover stays sharp however large the cover is styled; the
-   * browser scales it down for a small one.
+   * The widest cover Spotify offers (usually 640 px); the browser scales
+   * it down for a small one. Styled larger than that, it is upscaled.
    */
   getImgURL: function (images) {
     if (!images || images.length === 0) {
