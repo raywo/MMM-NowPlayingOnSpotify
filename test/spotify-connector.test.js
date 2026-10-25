@@ -38,3 +38,18 @@ test('a rate-limited player request is reported as a rate limit', async () => {
 
   await assert.rejects(createConnector().retrieveCurrentlyPlaying(), SpotifyConnector.RateLimitError);
 });
+
+test('asks Spotify for podcast episodes too', async () => {
+  let playerURL = null;
+  global.fetch = async (url) => {
+    if (url.includes('/api/token')) {
+      return Response.json({ access_token: 'token', expires_in: 3600 });
+    }
+    playerURL = new URL(url);
+    return new Response(null, { status: 204 });
+  };
+
+  await createConnector().retrieveCurrentlyPlaying();
+
+  assert.deepEqual(playerURL.searchParams.get('additional_types').split(','), ['track', 'episode']);
+});

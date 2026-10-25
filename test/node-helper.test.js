@@ -130,6 +130,78 @@ test('the payload carries no reason outside the warning window', () => {
   assert.equal(payload.authUnavailableReason, null);
 });
 
+function episodeData(images, showImages) {
+  return {
+    item: {
+      type: 'episode',
+      name: 'Episode',
+      images: images,
+      duration_ms: 3600 * MS_PER_SECOND,
+      show: { name: 'Show', publisher: 'Publisher', images: showImages }
+    },
+    currently_playing_type: 'episode',
+    progress_ms: 60 * MS_PER_SECOND,
+    is_playing: true,
+    device: { name: 'Device' }
+  };
+}
+
+test('shows a podcast episode with its show and publisher', () => {
+  helper = createHelper({});
+  const cover = { url: 'episode.jpg', width: 300 };
+
+  const payload = helper.buildPayload(episodeData([cover], []), null);
+
+  assert.equal(payload.noSong, undefined);
+  assert.equal(payload.songTitle, 'Episode');
+  assert.equal(payload.artist, 'Publisher');
+  assert.equal(payload.album, 'Show');
+  assert.equal(payload.imgURL, 'episode.jpg');
+  assert.equal(payload.titleLength, 3600 * MS_PER_SECOND);
+  assert.equal(payload.progress, 60 * MS_PER_SECOND);
+});
+
+test('takes the show cover when the episode has none', () => {
+  helper = createHelper({});
+
+  const payload = helper.buildPayload(episodeData([], [{ url: 'show.jpg', width: 300 }]), null);
+
+  assert.equal(payload.imgURL, 'show.jpg');
+});
+
+test('takes the widest album cover Spotify offers', () => {
+  helper = createHelper({});
+  const data = songData(true);
+  data.item.album.images = [
+    { url: 'medium.jpg', width: 300 },
+    { url: 'large.jpg', width: 640 },
+    { url: 'small.jpg', width: 64 }
+  ];
+
+  const payload = helper.buildPayload(data, null);
+
+  assert.equal(payload.imgURL, 'large.jpg');
+});
+
+test('takes the widest episode cover Spotify offers', () => {
+  helper = createHelper({});
+  const images = [{ url: 'small.jpg', width: 64 }, { url: 'large.jpg', width: 640 }];
+
+  const payload = helper.buildPayload(episodeData(images, []), null);
+
+  assert.equal(payload.imgURL, 'large.jpg');
+});
+
+test('takes the first cover when Spotify gives no widths', () => {
+  helper = createHelper({});
+  const data = songData(true);
+  data.item.album.images = [{ url: 'first.jpg', width: null }, { url: 'second.jpg', width: null }];
+
+  const payload = helper.buildPayload(data, null);
+
+  assert.equal(payload.imgURL, 'first.jpg');
+});
+
 function songData(isPlaying) {
   return {
     item: {
@@ -185,7 +257,7 @@ test('a paused song counts as nothing playing', async () => {
   assert.equal(helper.delays.at(-1), 10000);
 });
 
-test('an ad or a podcast episode without track data still counts as playing', async () => {
+test('an ad without track data still counts as playing', async () => {
   mock.timers.enable({ apis: ['Date'], now: 0 });
   const adBreak = { item: null, currently_playing_type: 'ad', is_playing: true };
   helper = createPollingHelper(IDLE_CONFIG, [adBreak, adBreak]);
@@ -341,4 +413,84 @@ test('keeps the report across a browser reload', async () => {
   helper.handleConnect(IDLE_CONFIG);
 
   assert.equal(lastSongData(helper).unavailable.reason, 'RATE_LIMITED');
+});
+
+const HIDE_CONFIG = Object.assign({ hideAfter: 60 }, IDLE_CONFIG);
+
+test('asks the mirror to hide the module once nothing has played for hideAfter seconds', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [null, null, null]);
+
+  await helper.poll();
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+  mock.timers.tick(59 * MS_PER_SECOND);
+  await helper.poll();
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+  mock.timers.tick(1 * MS_PER_SECOND);
+  await helper.poll();
+  assert.equal(lastSongData(helper).hideWhileIdle, true);
+});
+
+test('hides the module after a paused song too', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [songData(false), songData(false)]);
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).hideWhileIdle, true);
+});
+
+test('shows the module again as soon as something plays', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [null, null, songData(true)]);
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+});
+
+test('never hides the module without hideAfter', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(IDLE_CONFIG, [null, null]);
+
+  await helper.poll();
+  mock.timers.tick(24 * 60 * 60 * MS_PER_SECOND);
+  await helper.poll();
+
+  assert.equal(lastSongData(helper).hideWhileIdle, false);
+});
+
+test('shows the module while Spotify is unavailable, so the banner can be seen', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  const rateLimited = new SpotifyConnector.RateLimitError('Rate limited by Spotify.', 3 * 60 * 60 * MS_PER_SECOND);
+  helper = createPollingHelper(HIDE_CONFIG, [null, null, rateLimited]);
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+  await helper.poll();
+
+  const payload = lastSongData(helper);
+  assert.equal(payload.unavailable.reason, 'RATE_LIMITED');
+  assert.equal(payload.hideWhileIdle, false);
+});
+
+test('keeps the module hidden across a browser reload', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper(HIDE_CONFIG, [null, null]);
+  helper.initOnce = () => {};
+  helper.startPolling = () => {};
+
+  await helper.poll();
+  mock.timers.tick(60 * MS_PER_SECOND);
+  await helper.poll();
+  helper.notifications = [];
+  helper.handleConnect(HIDE_CONFIG);
+
+  assert.equal(lastSongData(helper).hideWhileIdle, true);
 });

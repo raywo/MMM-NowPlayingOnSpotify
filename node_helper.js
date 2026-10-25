@@ -45,10 +45,6 @@ const REAUTH_WARNING_LEAD_DAYS = 14;
 // LAN address yet at boot), try again at this interval.
 const AUTH_RETRY_INTERVAL_MS = 30 * MS_PER_SECOND;
 
-// Album cover selection: prefer a mid-sized image for the mirror.
-const COVER_MIN_WIDTH = 240;
-const COVER_MAX_WIDTH = 350;
-
 
 module.exports = NodeHelper.create({
 
@@ -190,8 +186,8 @@ module.exports = NodeHelper.create({
       const payload = this.buildPayload(data, authURL);
       this.lastPayload = payload;
       this.noteRecovery();
-      this.sendSongData();
       this.updateIdleState(this.isPlaying(data));
+      this.sendSongData();
       delayMs = this.updateIntervalMs();
     } catch (error) {
       if (error instanceof AuthRequiredError) {
@@ -330,11 +326,7 @@ module.exports = NodeHelper.create({
       };
     }
 
-    return {
-      imgURL: this.getImgURL(data.item.album.images),
-      songTitle: data.item.name,
-      artist: this.getArtistName(data.item.artists),
-      album: data.item.album.name,
+    return Object.assign(this.getItemInfo(data.item), {
       titleLength: data.item.duration_ms,
       progress: data.progress_ms,
       isPlaying: data.is_playing,
@@ -343,6 +335,29 @@ module.exports = NodeHelper.create({
       authURL: warnURL,
       authRelay: authRelay,
       authUnavailableReason: warnReason
+    });
+  },
+
+
+  /**
+   * A podcast episode fills the song's lines with its publisher and show.
+   */
+  getItemInfo: function (item) {
+    if (item.type === 'episode') {
+      const show = item.show || {};
+      return {
+        imgURL: this.getImgURL(item.images) || this.getImgURL(show.images),
+        songTitle: item.name,
+        artist: show.publisher || '',
+        album: show.name || ''
+      };
+    }
+
+    return {
+      imgURL: this.getImgURL(item.album.images),
+      songTitle: item.name,
+      artist: this.getArtistName(item.artists),
+      album: item.album.name
     };
   },
 
@@ -389,18 +404,21 @@ module.exports = NodeHelper.create({
   /**
    * Sends the last good data, marked as stale while Spotify is unavailable.
    * Without any data yet, the stale report goes with a nothing-playing payload.
+   * Computed per send so a browser reload restores whether the module hides.
    */
   sendSongData: function () {
-    let payload = this.lastPayload;
+    let payload = Object.assign({}, this.lastPayload || this.buildPayload(null, null), {
+      hideWhileIdle: this.shouldHideWhileIdle()
+    });
     if (this.unavailable) {
-      payload = Object.assign({}, payload || this.buildPayload(null, null), { unavailable: this.unavailable });
+      payload.unavailable = this.unavailable;
     }
     this.sendSocketNotification('RETRIEVED_SONG_DATA', payload);
   },
 
 
   /**
-   * Ads and podcast episodes arrive without an item but still play;
+   * Ads arrive without an item but still play;
    * they must not slow down polling for the song that follows.
    */
   isPlaying: function (data) {
@@ -433,6 +451,19 @@ module.exports = NodeHelper.create({
       this.log('Nothing playing for ' + this.formatDelay(idleAfterMs)
         + ' - polling every ' + this.formatDelay(this.updateIntervalMs()) + '.');
     }
+  },
+
+
+  /**
+   * hideAfter is opt-in: without it, the module never hides on its own.
+   * The stale-data banner must be visible to explain an empty mirror.
+   */
+  shouldHideWhileIdle: function () {
+    const hideAfterSeconds = Number(this.config.hideAfter) || 0;
+    if (hideAfterSeconds <= 0 || this.idleSince === null || this.unavailable) {
+      return false;
+    }
+    return Date.now() - this.idleSince >= hideAfterSeconds * MS_PER_SECOND;
   },
 
 
@@ -469,15 +500,19 @@ module.exports = NodeHelper.create({
   },
 
 
+  /**
+   * The widest cover Spotify offers (usually 640 px); the browser scales
+   * it down for a small one. Styled larger than that, it is upscaled.
+   */
   getImgURL: function (images) {
     if (!images || images.length === 0) {
       return '';
     }
 
-    const preferred = images.filter((image) =>
-      image.width >= COVER_MIN_WIDTH && image.width <= COVER_MAX_WIDTH);
+    const widest = images.reduce((best, image) =>
+      (image.width || 0) > (best.width || 0) ? image : best);
 
-    return (preferred[0] || images[0]).url;
+    return widest.url;
   },
 
 

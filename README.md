@@ -1,6 +1,6 @@
 # MMM-NowPlayingOnSpotify
 
-A module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) displaying the song currently playing on Spotify: title, artist, album, progress, the playing device and, optionally, the album cover.
+A module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) displaying the song currently playing on Spotify: title, artist, album, progress, the playing device and, optionally, the album cover. A podcast episode shows its publisher in place of the artist and its show in place of the album.
 
 ![A song playing, with cover art](img/readme/NowPlayingOnSpotify.png)
 
@@ -110,6 +110,7 @@ Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own des
 | `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
 | `idleAfter` | Seconds without playback – nothing playing or paused – after which the module queries Spotify less often. Default: `30`. |
 | `idleUpdatesEvery` | Interval in seconds for querying Spotify while nothing is playing or playback is paused. Default: `10`. When playback starts, the display follows within this interval and then switches back to `updatesEvery`. Never shorter than `updatesEvery`; set it to the same value to query at a constant rate. |
+| `hideAfter` | Seconds without playback – nothing playing or paused – after which the module hides itself. It reappears as soon as playback starts, within `idleUpdatesEvery`, and whenever the module needs to be re-authorized or shows that Spotify is unavailable. Default: `0`, the module never hides. |
 
 ## Customizing the appearance
 
@@ -117,7 +118,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 
 | Class | Element |
 |-------|---------|
-| `.NPOS_albumCover` | Album cover image |
+| `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode |
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
