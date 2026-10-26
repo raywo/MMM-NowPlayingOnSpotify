@@ -118,8 +118,10 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 
 | Class | Element |
 |-------|---------|
-| `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode |
-| `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order) |
+| `.NPOS_playingContent` | Everything shown while a song plays; sets the module's width, 300px by default, so it does not fill the screen in wide regions such as `upper_third` or `fullscreen_above`. Follows the region's alignment: centered in wide regions, at the edge in side regions |
+| `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode; as wide as `.NPOS_playingContent` |
+| `.NPOS_infoArea` | Text lines and progress bar below the cover; as wide as `.NPOS_playingContent` |
+| `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order); text that does not fit ends in an ellipsis |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
 | `.NPOS_statusBanner` | Notice that Spotify limits requests or cannot be reached; the module then keeps showing the last known song |
@@ -133,6 +135,18 @@ For example, to shrink the cover and hide the logo when nothing is playing:
 
 .MMM-NowPlayingOnSpotify .NPOS_nothingIsPlayingImage {
   display: none;
+}
+```
+
+A cover narrower than the module stays left-aligned, flush with the text. To make room for longer titles while keeping the cover small, widen the module and narrow the cover:
+
+```css
+.MMM-NowPlayingOnSpotify .NPOS_playingContent {
+  width: 450px;
+}
+
+.MMM-NowPlayingOnSpotify .NPOS_albumCover {
+  width: 200px;
 }
 ```
 
