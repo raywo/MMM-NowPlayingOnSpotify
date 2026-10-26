@@ -195,6 +195,10 @@ pnpm install
 pnpm lint
 ```
 
+## Support
+
+If the module brightens up your mirror, you can [buy me a coffee](https://www.buymeacoffee.com/raywo).
+
 ## Credits
 
 Version 2 – token expiry handling, token store, integrated authorization server and the dependency-free rewrite – was contributed by [Dr. Ralf Korell](https://github.com/rkorell).
