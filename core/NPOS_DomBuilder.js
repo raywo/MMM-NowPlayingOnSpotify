@@ -245,6 +245,7 @@ class NPOS_DomBuilder {
    */
   getPlayingContent(context) {
     let content = document.createElement('div');
+    content.className = 'NPOS_playingContent';
 
     if (this.config.showCoverArt) {
       content.appendChild(this.getCoverArtDiv(context.imgURL));
@@ -252,14 +253,23 @@ class NPOS_DomBuilder {
       content.appendChild(this.getIconImage('NPOS_logoImage'));
     }
 
-    content.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
-    content.appendChild(this.getInfoDiv('fa fa-user', context.artist));
-    content.appendChild(this.getInfoDiv('fa fa-folder', context.album));
-    content.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
-    content.appendChild(this.getProgressBar(context));
-    content.appendChild(this.getInfoDiv('', context.deviceName));
+    content.appendChild(this.getInfoArea(context));
 
     return content;
+  }
+
+  getInfoArea(context) {
+    let infoArea = document.createElement('div');
+    infoArea.className = 'NPOS_infoArea';
+
+    infoArea.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
+    infoArea.appendChild(this.getInfoDiv('fa fa-user', context.artist));
+    infoArea.appendChild(this.getInfoDiv('fa fa-folder', context.album));
+    infoArea.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
+    infoArea.appendChild(this.getProgressBar(context));
+    infoArea.appendChild(this.getInfoDiv('', context.deviceName));
+
+    return infoArea;
   }
 
   getProgressBar(context) {

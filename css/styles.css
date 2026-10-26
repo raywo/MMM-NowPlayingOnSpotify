@@ -73,14 +73,21 @@
   width: 100%;
 }
 
-/* max-width keeps the cover from filling the screen in wide regions such as
-   upper_third or fullscreen_above. In side regions, which grow to fit their
-   content, it also sets the cover's width: the image itself is wider. */
+/* Sets the width of the whole module; everything inside fills it. A fixed
+   width keeps the module from filling the screen in wide regions such as
+   upper_third. inline-block follows the region's text-align: centered in
+   wide regions, at the edge in side regions. */
+.NPOS_playingContent {
+  display: inline-block;
+  width: 300px;
+}
+
 .NPOS_albumCover {
   display: block;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 300px;
+  width: 100%;
+}
+
+.NPOS_infoArea {
   width: 100%;
 }
 
@@ -106,11 +113,11 @@
 }
 
 .NPOS_infoText {
-  max-width: 30ch;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
 }
 
 .NPOS_icon {
