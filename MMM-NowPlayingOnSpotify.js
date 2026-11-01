@@ -23,6 +23,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
     idleUpdatesEvery: 10,     // Polling interval in s while nothing is playing
     hideAfter: 0,             // Seconds without playback before the module hides, 0 = never
     showCoverArt: true,       // Do you want the cover art to be displayed?
+    coverShadow: true,        // Lift the cover off the background with a shadow
     redirectURI: '',          // Whitelisted Spotify redirect URI for (re-)authorization
     authHost: '',             // Relay mode: mirror's LAN address, detected if empty
     authPort: 8888            // Relay mode: port of the authorization server

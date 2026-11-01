@@ -107,6 +107,7 @@ Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own des
 | `authHost` | The mirror's private IPv4 address in your local network, shown in the QR code. Default: detected automatically. Only used with the relay page. |
 | `authPort` | Port the module listens on in your local network during authorization. Default: `8888`. Only used with the relay page. |
 | `showCoverArt` | Show the album cover. Default: `true` |
+| `coverShadow` | Lift the album cover off the background with a soft shadow and a thin light outline. Default: `true`. Set it to `false` for a flat cover. |
 | `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
 | `idleAfter` | Seconds without playback – nothing playing or paused – after which the module queries Spotify less often. Default: `30`. |
 | `idleUpdatesEvery` | Interval in seconds for querying Spotify while nothing is playing or playback is paused. Default: `10`. When playback starts, the display follows within this interval and then switches back to `updatesEvery`. Never shorter than `updatesEvery`; set it to the same value to query at a constant rate. |
@@ -120,6 +121,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 |-------|---------|
 | `.NPOS_playingContent` | Everything shown while a song plays; sets the module's width, 300px by default, so it does not fill the screen in wide regions such as `upper_third` or `fullscreen_above`. Follows the region's alignment: centered in wide regions, at the edge in side regions |
 | `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode; as wide as `.NPOS_playingContent` |
+| `.NPOS_albumCover--shadow` | Shadow and outline of the album cover; only present while `coverShadow` is `true` |
 | `.NPOS_infoArea` | Text lines and progress bar below the cover; as wide as `.NPOS_playingContent` |
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order); text that does not fit ends in an ellipsis |
 | `.NPOS_progress` | Progress bar |

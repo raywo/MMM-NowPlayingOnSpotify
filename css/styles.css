@@ -83,8 +83,20 @@
 }
 
 .NPOS_albumCover {
+  border-radius: 0.5em;
   display: block;
+  margin-bottom: 0.6em;
   width: 100%;
+}
+
+/* Lifts the cover off photo backgrounds; set by the coverShadow option. The
+   ring is a spread shadow rather than a border so it follows the rounded
+   corners and keeps dark covers apart from dark backgrounds without
+   changing the cover's size. */
+.NPOS_albumCover--shadow {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.15),
+    0 0.5em 2em rgba(0, 0, 0, 0.6);
 }
 
 .NPOS_infoArea {

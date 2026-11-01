@@ -324,6 +324,9 @@ class NPOS_DomBuilder {
     let cover = document.createElement('img');
     cover.src = coverURL;
     cover.className = 'NPOS_albumCover';
+    if (this.config.coverShadow) {
+      cover.classList.add('NPOS_albumCover--shadow');
+    }
 
     coverArea.appendChild(cover);
 
