@@ -368,6 +368,22 @@ test('custom.css sets speed and pause of the scrolling', () => {
   assert.equal(keyframes[1].offset, 3000 / 18800);
 });
 
+test('keyframe offsets stay within 0 and 1 at any scroll speed', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  // At 30 px/s, 7 px used to round the last move's end to just above 1.
+  infoArea.style.setProperty('--NPOS-scroll-speed', '30');
+  const inner = layOut(scrollableLines(infoArea)[0], 267, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  const offsets = inner.started[0].keyframes.map((frame) => frame.offset);
+  offsets.forEach((offset, index) => {
+    assert.ok(offset >= 0 && offset <= 1, 'offset ' + offset + ' out of range');
+    assert.ok(index === 0 || offset >= offsets[index - 1], 'offsets decrease at ' + index);
+  });
+});
+
 test('invalid scroll settings fall back to the defaults', () => {
   const builder = loadBuilder(null, { scrollLongText: true });
   const infoArea = builder.getInfoArea(PLAYING);

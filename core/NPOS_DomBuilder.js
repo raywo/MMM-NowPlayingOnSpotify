@@ -454,7 +454,9 @@ class NPOS_DomBuilder {
   getMoveKeyframes(leave, from, to, move, timing) {
     let direction = Math.sign(to - from);
     let linear = (Math.abs(to - from) - 2 * move.rampDistance) / timing.speed;
-    let at = (time) => time / timing.total;
+    // Rounding can put the longest line's last offset just above 1, which
+    // animate() rejects.
+    let at = (time) => Math.min(time / timing.total, 1);
 
     return [
       { transform: this.getShift(from), offset: at(leave), easing: NPOS_EASE_IN_QUAD },
