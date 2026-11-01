@@ -266,11 +266,11 @@ class NPOS_DomBuilder {
     infoArea.className = 'NPOS_infoArea';
 
     infoArea.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
-    infoArea.appendChild(this.getInfoDiv('fa fa-user', context.artist));
-    infoArea.appendChild(this.getInfoDiv('fa fa-folder', context.album));
+    infoArea.appendChild(this.getInfoDiv('fa fa-microphone', context.artist));
+    infoArea.appendChild(this.getInfoDiv('fa fa-compact-disc', context.album));
     infoArea.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
     infoArea.appendChild(this.getProgressBar(context));
-    infoArea.appendChild(this.getInfoDiv('', context.deviceName));
+    infoArea.appendChild(this.getInfoDiv(context.deviceName ? 'fa fa-headphones' : '', context.deviceName));
 
     return infoArea;
   }

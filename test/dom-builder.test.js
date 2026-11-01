@@ -203,3 +203,17 @@ test('the gap below the cover is set on the info area', () => {
   assert.match(css, /\.NPOS_coverArtArea \+ \.NPOS_infoArea\s*\{[^}]*margin-top/);
   assert.doesNotMatch(css, /\.NPOS_albumCover\s*\{[^}]*margin-bottom/);
 });
+
+test('the lines carry the reviewed icons', () => {
+  const builder = loadBuilder();
+
+  const icons = Array.from(builder.getInfoArea(PLAYING).querySelectorAll('.NPOS_icon')).map((icon) => icon.className);
+
+  assert.deepEqual(icons, [
+    'NPOS_icon fa fa-music',
+    'NPOS_icon fa fa-microphone',
+    'NPOS_icon fa fa-compact-disc',
+    'NPOS_icon fa fa-play',
+    'NPOS_icon fa fa-headphones'
+  ]);
+});
