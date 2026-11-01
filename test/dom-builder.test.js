@@ -12,13 +12,15 @@ const TRANSLATIONS = JSON.parse(fs.readFileSync(path.join(ROOT, 'translations/en
 // The README documents this class for styling the banner.
 const STATUS_BANNER_CLASS = 'NPOS_statusBanner';
 const NOTHING_PLAYING = { noSong: true };
+// css/styles.css draws the cover's shadow on this class only.
+const COVER_SHADOW_CLASS = 'NPOS_albumCover--shadow';
 
 /**
  * NPOS_DomBuilder is a browser global without module.exports, so it is run
  * as a script inside a jsdom window, as MagicMirror loads it via
  * getScripts().
  */
-function loadBuilder(mirrorConfig) {
+function loadBuilder(mirrorConfig, moduleConfig) {
   const dom = new JSDOM('', { runScripts: 'outside-only' });
   if (mirrorConfig) {
     dom.window.config = mirrorConfig;
@@ -27,7 +29,7 @@ function loadBuilder(mirrorConfig) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'core/NPOS_DomBuilder.js'), 'utf8'), context);
   const NPOS_DomBuilder = vm.runInContext('NPOS_DomBuilder', context);
 
-  return new NPOS_DomBuilder({}, 'modules/MMM-NowPlayingOnSpotify', translate);
+  return new NPOS_DomBuilder(moduleConfig || {}, 'modules/MMM-NowPlayingOnSpotify', translate);
 }
 
 // Substitutes variables like MagicMirror's translator does.
@@ -81,4 +83,28 @@ test('the banner carries the documented CSS class', () => {
 
   assert.ok(banner.classList.contains(STATUS_BANNER_CLASS));
   assert.match(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8'), new RegExp('`\\.' + STATUS_BANNER_CLASS + '`'));
+});
+
+test('the cover carries the shadow class when coverShadow is on', () => {
+  const builder = loadBuilder(null, { coverShadow: true });
+
+  const cover = builder.getCoverArtDiv('cover.jpg').querySelector('img');
+
+  assert.ok(cover.classList.contains('NPOS_albumCover'));
+  assert.ok(cover.classList.contains(COVER_SHADOW_CLASS));
+});
+
+test('the cover has no shadow class when coverShadow is off', () => {
+  const builder = loadBuilder(null, { coverShadow: false });
+
+  const cover = builder.getCoverArtDiv('cover.jpg').querySelector('img');
+
+  assert.ok(cover.classList.contains('NPOS_albumCover'));
+  assert.ok(!cover.classList.contains(COVER_SHADOW_CLASS));
+});
+
+test('the stylesheet draws the shadow on the shadow class', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+
+  assert.match(css, new RegExp('\\.' + COVER_SHADOW_CLASS + '\\s*\\{[^}]*box-shadow'));
 });
