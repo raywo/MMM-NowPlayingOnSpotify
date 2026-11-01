@@ -109,6 +109,7 @@ Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own des
 | `showCoverArt` | Show the album cover. Default: `true` |
 | `coverShadow` | Lift the album cover off the background with a soft shadow and a thin light outline. Default: `true`. Set it to `false` for a flat cover. Has no effect while `coverGlow` is `true`. |
 | `coverGlow` | Surround the album cover with a soft glow in the cover's own colors, so it blends into the background, and leave more room below the cover. Replaces the shadow of `coverShadow`. Default: `false`. |
+| `scrollLongText` | Let a line of text that is wider than the module – title, artist, album or device – scroll to its end, pause, and scroll back. Lines that fit stay still. Default: `true`. Set it to `false` to cut long lines off with an ellipsis. |
 | `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
 | `idleAfter` | Seconds without playback – nothing playing or paused – after which the module queries Spotify less often. Default: `30`. |
 | `idleUpdatesEvery` | Interval in seconds for querying Spotify while nothing is playing or playback is paused. Default: `10`. When playback starts, the display follows within this interval and then switches back to `updatesEvery`. Never shorter than `updatesEvery`; set it to the same value to query at a constant rate. |
@@ -125,7 +126,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 | `.NPOS_albumCover--shadow` | Shadow and outline of the album cover; only present while `coverShadow` is `true` and `coverGlow` is not |
 | `.NPOS_coverGlow` | Blurred copy of the album cover behind it; only present while `coverGlow` is `true`. As wide as `.NPOS_playingContent`, so give it the same width when you resize the cover |
 | `.NPOS_infoArea` | Text lines and progress bar below the cover; as wide as `.NPOS_playingContent`. Its `margin-top` sets the gap to the cover |
-| `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order); text that does not fit ends in an ellipsis |
+| `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order); text that does not fit scrolls, or ends in an ellipsis while `scrollLongText` is `false` |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |
 | `.NPOS_statusBanner` | Notice that Spotify limits requests or cannot be reached; the module then keeps showing the last known song |
@@ -140,6 +141,16 @@ For example, to shrink the cover and hide the logo when nothing is playing:
 
 .MMM-NowPlayingOnSpotify .NPOS_nothingIsPlayingImage {
   display: none;
+}
+```
+
+Scrolling lines move in step at 40 pixels per second: they pause for 2 seconds, scroll to their end together, and scroll back together once the longest line has paused at its end. A shorter line waits at either end for the longest one. To change speed and pause, and the gap between cover and text:
+
+```css
+.MMM-NowPlayingOnSpotify .NPOS_infoArea {
+  --NPOS-scroll-speed: 25;   /* pixels per second */
+  --NPOS-scroll-pause: 3;    /* seconds */
+  margin-top: 1em;
 }
 ```
 

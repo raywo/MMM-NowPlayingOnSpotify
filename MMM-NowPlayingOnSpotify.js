@@ -25,6 +25,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
     showCoverArt: true,       // Do you want the cover art to be displayed?
     coverShadow: true,        // Lift the cover off the background with a shadow
     coverGlow: false,         // Surround the cover with a blurred glow in its colors
+    scrollLongText: true,     // Scroll lines wider than the module instead of cutting them off
     redirectURI: '',          // Whitelisted Spotify redirect URI for (re-)authorization
     authHost: '',             // Relay mode: mirror's LAN address, detected if empty
     authPort: 8888            // Relay mode: port of the authorization server
@@ -43,6 +44,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
     // it in place instead of rebuilding the cover.
     this.renderedDom = null;
     this.renderedLayoutKey = null;
+    this.lineObserver = null;
 
     // Send the config once - the backend takes over from here.
     this.sendSocketNotification('CONNECT_TO_SPOTIFY', this.config);
@@ -68,7 +70,30 @@ Module.register('MMM-NowPlayingOnSpotify', {
       this.renderedDom = domBuilder.getInitDom(this.translate('LOADING'));
     }
 
+    this.watchLongLines(domBuilder);
+
     return this.renderedDom;
+  },
+
+  /**
+   * Whether a line overflows is only known once it is laid out. The
+   * observer measures the lines when the info area gets its size in the
+   * document and again whenever its width changes, e.g. after the module
+   * was shown again or custom.css resized it.
+   */
+  watchLongLines: function (domBuilder) {
+    if (this.lineObserver) {
+      this.lineObserver.disconnect();
+      this.lineObserver = null;
+    }
+
+    let infoArea = this.renderedDom.querySelector('.NPOS_infoArea');
+    if (!this.config.scrollLongText || !infoArea) {
+      return;
+    }
+
+    this.lineObserver = new ResizeObserver(() => domBuilder.scrollLongLines(infoArea));
+    this.lineObserver.observe(infoArea);
   },
 
   getDomBuilder: function () {
@@ -77,8 +102,9 @@ Module.register('MMM-NowPlayingOnSpotify', {
 
   /**
    * updateDom() replaces the module's whole content, which would rasterize
-   * the cover's blurred glow again on every poll. While the same track plays,
-   * only the info area changes, so it is replaced on its own.
+   * the cover's blurred glow again on every poll and restart the scrolling
+   * lines. While the same track plays, only time, play state and progress
+   * change, so they are updated in place.
    */
   showSongData: function () {
     let domBuilder = this.getDomBuilder();

@@ -161,15 +161,36 @@
 }
 
 .NPOS_infoText {
-  overflow: hidden;
+  align-items: baseline;
+  display: flex;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   width: 100%;
 }
 
 .NPOS_icon {
+  flex: none;
   margin-right: 1em;
+}
+
+/* Clips the text, not the icon. min-width: 0 lets it shrink below the
+   width of its text, so overflow can be measured and cut off. */
+.NPOS_infoTextClip {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Set on lines that overflow while scrollLongText is on. The text becomes
+   a box of its own so it can move, and the ellipsis gives way to the
+   scrolling. */
+.NPOS_infoText--scrolling .NPOS_infoTextClip {
+  text-overflow: clip;
+}
+
+.NPOS_infoText--scrolling .NPOS_infoTextInner {
+  display: inline-block;
 }
 
 progress.NPOS_progress {
