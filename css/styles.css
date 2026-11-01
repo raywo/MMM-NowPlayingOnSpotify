@@ -196,7 +196,7 @@
 progress.NPOS_progress {
   background-color: transparent;
   border-radius: 1em;
-  border: 1px solid #aaaaaa;
+  border: 1px solid currentColor;
   height: 0.5em;
   width: 100%;
 }
@@ -206,5 +206,5 @@ progress[value].NPOS_progress::-webkit-progress-bar {
 }
 
 progress[value].NPOS_progress::-webkit-progress-value {
-  background-color: #aaaaaa;
+  background-color: currentColor;
 }

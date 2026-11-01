@@ -190,6 +190,13 @@ test('the stylesheet blurs the glow', () => {
   assert.match(css, new RegExp('\\.' + COVER_GLOW_CLASS + '\\s*\\{[^}]*filter:\\s*blur'));
 });
 
+test('the stylesheet draws the progress bar in the text colour', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+
+  assert.match(css, /progress\.NPOS_progress\s*\{[^}]*border:[^;}]*currentColor/);
+  assert.match(css, /NPOS_progress::-webkit-progress-value\s*\{[^}]*background-color:\s*currentColor/);
+});
+
 test('the README documents the glow class', () => {
   assert.match(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8'), new RegExp('`\\.' + COVER_GLOW_CLASS + '`'));
 });
