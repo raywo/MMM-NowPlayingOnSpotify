@@ -124,7 +124,7 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 | `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode; as wide as `.NPOS_playingContent` |
 | `.NPOS_albumCover--shadow` | Shadow and outline of the album cover; only present while `coverShadow` is `true` and `coverGlow` is not |
 | `.NPOS_coverGlow` | Blurred copy of the album cover behind it; only present while `coverGlow` is `true`. As wide as `.NPOS_playingContent`, so give it the same width when you resize the cover |
-| `.NPOS_infoArea` | Text lines and progress bar below the cover; as wide as `.NPOS_playingContent` |
+| `.NPOS_infoArea` | Text lines and progress bar below the cover; as wide as `.NPOS_playingContent`. Its `margin-top` sets the gap to the cover |
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order); text that does not fit ends in an ellipsis |
 | `.NPOS_progress` | Progress bar |
 | `.NPOS_nothingIsPlayingImage` | Spotify logo shown when nothing is playing |

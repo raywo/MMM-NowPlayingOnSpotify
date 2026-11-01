@@ -196,3 +196,10 @@ test('updating a wrapper without info area reports that nothing was updated', ()
 
   assert.equal(builder.updateInfoArea(builder.getDom(NOTHING_PLAYING), PLAYING), false);
 });
+
+test('the gap below the cover is set on the info area', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+
+  assert.match(css, /\.NPOS_coverArtArea \+ \.NPOS_infoArea\s*\{[^}]*margin-top/);
+  assert.doesNotMatch(css, /\.NPOS_albumCover\s*\{[^}]*margin-bottom/);
+});

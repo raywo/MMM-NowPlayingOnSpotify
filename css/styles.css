@@ -85,7 +85,6 @@
 .NPOS_albumCover {
   border-radius: 0.5em;
   display: block;
-  margin-bottom: 0.6em;
   width: 100%;
 }
 
@@ -107,9 +106,15 @@
   position: relative;
 }
 
+/* The gap between cover and text sits on the info area, so custom.css can
+   change it there. */
+.NPOS_coverArtArea + .NPOS_infoArea {
+  margin-top: 0.6em;
+}
+
 /* The glow reaches beyond the cover; more room keeps it off the text. */
-.NPOS_coverArtArea--glow .NPOS_albumCover {
-  margin-bottom: 1.5em;
+.NPOS_coverArtArea--glow + .NPOS_infoArea {
+  margin-top: 1.5em;
 }
 
 /* A blurred, slightly enlarged copy of the cover that lets its colors bleed
