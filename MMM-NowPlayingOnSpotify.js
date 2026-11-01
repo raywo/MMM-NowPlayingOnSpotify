@@ -24,6 +24,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
     hideAfter: 0,             // Seconds without playback before the module hides, 0 = never
     showCoverArt: true,       // Do you want the cover art to be displayed?
     coverShadow: true,        // Lift the cover off the background with a shadow
+    coverGlow: false,         // Surround the cover with a blurred glow in its colors
     redirectURI: '',          // Whitelisted Spotify redirect URI for (re-)authorization
     authHost: '',             // Relay mode: mirror's LAN address, detected if empty
     authPort: 8888            // Relay mode: port of the authorization server
@@ -38,6 +39,10 @@ Module.register('MMM-NowPlayingOnSpotify', {
     this.context = {};
     this.authInfo = null;
     this.hiddenWhileIdle = false;
+    // What getDom() rendered last, so a poll for the same track can update
+    // it in place instead of rebuilding the cover.
+    this.renderedDom = null;
+    this.renderedLayoutKey = null;
 
     // Send the config once - the backend takes over from here.
     this.sendSocketNotification('CONNECT_TO_SPOTIFY', this.config);
@@ -51,17 +56,40 @@ Module.register('MMM-NowPlayingOnSpotify', {
   },
 
   getDom: function () {
-    let domBuilder = new NPOS_DomBuilder(this.config, this.file(''), this.translate.bind(this));
+    let domBuilder = this.getDomBuilder();
+    this.renderedLayoutKey = null;
 
     if (this.authRequired) {
-      return domBuilder.getReauthDom(this.authInfo);
+      this.renderedDom = domBuilder.getReauthDom(this.authInfo);
+    } else if (this.initialized) {
+      this.renderedDom = domBuilder.getDom(this.context);
+      this.renderedLayoutKey = domBuilder.getLayoutKey(this.context);
+    } else {
+      this.renderedDom = domBuilder.getInitDom(this.translate('LOADING'));
     }
 
-    if (this.initialized) {
-      return domBuilder.getDom(this.context);
+    return this.renderedDom;
+  },
+
+  getDomBuilder: function () {
+    return new NPOS_DomBuilder(this.config, this.file(''), this.translate.bind(this));
+  },
+
+  /**
+   * updateDom() replaces the module's whole content, which would rasterize
+   * the cover's blurred glow again on every poll. While the same track plays,
+   * only the info area changes, so it is replaced on its own.
+   */
+  showSongData: function () {
+    let domBuilder = this.getDomBuilder();
+    let unchanged = this.renderedLayoutKey !== null
+      && this.renderedLayoutKey === domBuilder.getLayoutKey(this.context);
+
+    if (unchanged && domBuilder.updateInfoArea(this.renderedDom, this.context)) {
+      return;
     }
 
-    return domBuilder.getInitDom(this.translate('LOADING'));
+    this.updateDom();
   },
 
   getStyles: function () {
@@ -84,7 +112,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
         this.initialized = true;
         this.authRequired = false;
         this.context = payload;
-        this.updateDom();
+        this.showSongData();
         this.setHiddenWhileIdle(payload.hideWhileIdle);
         break;
 

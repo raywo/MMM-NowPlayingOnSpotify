@@ -14,6 +14,9 @@ const NPOS_QR_TYPE_AUTO = 0;
 const NPOS_QR_ERROR_CORRECTION = 'M';
 // Scanners need a light margin of four modules around the code.
 const NPOS_QR_QUIET_ZONE = 4;
+// Change while the same track plays; they only reach the info area.
+// hideWhileIdle is not shown at all.
+const NPOS_PLAYBACK_FIELDS = ['progress', 'isPlaying', 'hideWhileIdle'];
 
 class NPOS_DomBuilder {
 
@@ -317,20 +320,69 @@ class NPOS_DomBuilder {
     return infoDiv;
   }
 
+  /**
+   * Identifies what the module shows, apart from the fields that change
+   * during playback of the same track. Two contexts with the same key differ
+   * only in what updateInfoArea() can update in place.
+   */
+  getLayoutKey(context) {
+    let layout = Object.assign({}, context);
+    NPOS_PLAYBACK_FIELDS.forEach((field) => delete layout[field]);
+
+    return JSON.stringify(layout);
+  }
+
+  /**
+   * Replaces only the info area of a rendered wrapper, so the cover and its
+   * blurred glow stay in place and are not rasterized again on every poll.
+   *
+   * @returns {boolean} false if the wrapper has no info area to update.
+   */
+  updateInfoArea(wrapper, context) {
+    let infoArea = wrapper.querySelector('.NPOS_infoArea');
+    if (!infoArea) {
+      return false;
+    }
+
+    infoArea.replaceWith(this.getInfoArea(context));
+
+    return true;
+  }
+
   getCoverArtDiv(coverURL) {
     let coverArea = document.createElement('div');
     coverArea.className = 'NPOS_coverArtArea';
 
+    if (this.config.coverGlow) {
+      coverArea.classList.add('NPOS_coverArtArea--glow');
+      coverArea.appendChild(this.getCoverGlow(coverURL));
+    }
+
     let cover = document.createElement('img');
     cover.src = coverURL;
     cover.className = 'NPOS_albumCover';
-    if (this.config.coverShadow) {
+    // Shadow and glow exclude each other: the shadow sets the cover apart
+    // from the background, the glow blends it in. The glow is opt-in while
+    // the shadow is on by default, so the glow wins.
+    if (this.config.coverShadow && !this.config.coverGlow) {
       cover.classList.add('NPOS_albumCover--shadow');
     }
 
     coverArea.appendChild(cover);
 
     return coverArea;
+  }
+
+  // A blurred copy of the cover behind it; decorative, so hidden from
+  // assistive technology.
+  getCoverGlow(coverURL) {
+    let glow = document.createElement('img');
+    glow.src = coverURL;
+    glow.alt = '';
+    glow.className = 'NPOS_coverGlow';
+    glow.setAttribute('aria-hidden', 'true');
+
+    return glow;
   }
 
   getPlayStatusIcon(isPlaying) {
