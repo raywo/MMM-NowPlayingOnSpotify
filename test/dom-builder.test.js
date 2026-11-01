@@ -37,6 +37,8 @@ function loadBuilder(mirrorConfig, moduleConfig) {
   if (mirrorConfig) {
     dom.window.config = mirrorConfig;
   }
+  // jsdom has no Web Animations API; the shared start time comes from here.
+  dom.window.document.timeline = { currentTime: 1234 };
   const context = dom.getInternalVMContext();
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'core/NPOS_DomBuilder.js'), 'utf8'), context);
   const NPOS_DomBuilder = vm.runInContext('NPOS_DomBuilder', context);
@@ -49,6 +51,37 @@ function translate(key, variables) {
   return Object.entries(variables || {}).reduce(
     (text, [name, value]) => text.replace('{' + name + '}', value),
     TRANSLATIONS[key]);
+}
+
+/**
+ * jsdom has no layout and no Web Animations API. Gives the clip of a line
+ * and its text the widths a browser would measure while the text is not
+ * shifted, and records the animations started.
+ */
+function layOut(line, scrollWidth, clientWidth) {
+  const clip = line.querySelector('.NPOS_infoTextClip');
+  Object.defineProperty(clip, 'scrollWidth', { value: scrollWidth, configurable: true });
+  Object.defineProperty(clip, 'clientWidth', { value: clientWidth, configurable: true });
+  const inner = clip.firstChild;
+  Object.defineProperty(inner, 'offsetWidth', { value: scrollWidth, configurable: true });
+  inner.started = [];
+  inner.getAnimations = () => inner.started.filter((animation) => !animation.cancelled);
+  inner.animate = (keyframes, timing) => {
+    const animation = { keyframes, timing, cancel() { this.cancelled = true; } };
+    inner.started.push(animation);
+    return animation;
+  };
+
+  return inner;
+}
+
+// Every line fits until a test lays one out wider.
+function scrollableLines(infoArea) {
+  const lines = Array.from(infoArea.querySelectorAll('.NPOS_infoText--scrollable'));
+  lines.filter((line) => !line.querySelector('.NPOS_infoTextInner').animate)
+    .forEach((line) => layOut(line, 100, 100));
+
+  return lines;
 }
 
 function statusBanners(wrapper) {
@@ -195,4 +228,259 @@ test('updating a wrapper without info area reports that nothing was updated', ()
   const builder = loadBuilder();
 
   assert.equal(builder.updateInfoArea(builder.getDom(NOTHING_PLAYING), PLAYING), false);
+});
+
+test('title, artist, album and device scroll, the time does not', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+
+  const lines = scrollableLines(builder.getInfoArea(PLAYING)).map((line) => line.textContent);
+
+  assert.deepEqual(lines, ['Song', 'Artist', 'Album', 'Kitchen']);
+});
+
+test('no line scrolls with scrollLongText off', () => {
+  const builder = loadBuilder(null, { scrollLongText: false });
+
+  assert.equal(scrollableLines(builder.getInfoArea(PLAYING)).length, 0);
+});
+
+test('the icon stays outside the part that scrolls', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+
+  const title = builder.getInfoArea(PLAYING).querySelector('.NPOS_infoText');
+
+  assert.ok(title.querySelector(':scope > .NPOS_icon'));
+  assert.equal(title.querySelector('.NPOS_infoTextClip .NPOS_icon'), null);
+});
+
+test('a line wider than its clip scrolls exactly to its end and back', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const title = scrollableLines(infoArea)[0];
+  const inner = layOut(title, 380, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  const transforms = Array.from(inner.started[0].keyframes, (frame) => frame.transform);
+  // Ramps of 0.4 s at 40 px/s cover 8 px each.
+  assert.deepEqual(transforms, [
+    'translateX(0)',
+    'translateX(0)', 'translateX(-8px)', 'translateX(-112px)', 'translateX(-120px)',
+    'translateX(-120px)', 'translateX(-112px)', 'translateX(-8px)', 'translateX(0)',
+    'translateX(0)'
+  ]);
+  assert.equal(inner.started[0].timing.iterations, Infinity);
+  assert.ok(title.classList.contains('NPOS_infoText--scrolling'));
+});
+
+test('a line that fits does not move', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const title = scrollableLines(infoArea)[0];
+  const inner = layOut(title, 260, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  assert.equal(inner.started.length, 0);
+  assert.ok(!title.classList.contains('NPOS_infoText--scrolling'));
+});
+
+test('lines of different length move alike until the shorter one stops', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const [title, artist] = scrollableLines(infoArea);
+  const shortInner = layOut(title, 300, 260);
+  const longInner = layOut(artist, 500, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  const short = shortInner.started[0];
+  const long = longInner.started[0];
+  const position = (frame) => parseFloat(frame.transform.slice('translateX('.length));
+  const time = (animation, index) => animation.keyframes[index].offset * animation.timing.duration;
+  // Speed of the linear part, between the end of the ramp up and the start
+  // of the ramp down, in pixels per millisecond.
+  const speed = (animation) => (position(animation.keyframes[3]) - position(animation.keyframes[2]))
+    / (time(animation, 3) - time(animation, 2));
+
+  assert.equal(time(short, 2), time(long, 2));
+  assert.equal(short.keyframes[2].transform, long.keyframes[2].transform);
+  assert.equal(short.keyframes[1].easing, long.keyframes[1].easing);
+  assert.ok(Math.abs(speed(short) - speed(long)) < 1e-9);
+  assert.ok(Math.abs(speed(long) + 0.04) < 1e-9);
+});
+
+test('measuring again with the same width keeps the running animation', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const inner = layOut(scrollableLines(infoArea)[0], 380, 260);
+
+  builder.scrollLongLines(infoArea);
+  builder.scrollLongLines(infoArea);
+
+  assert.equal(inner.started.length, 1);
+  assert.ok(!inner.started[0].cancelled);
+});
+
+test('measuring again while the text is shifted keeps the full scroll distance', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const title = scrollableLines(infoArea)[0];
+  const inner = layOut(title, 380, 260);
+  builder.scrollLongLines(infoArea);
+
+  // A browser counts the shifted text into the clip's scrollWidth.
+  Object.defineProperty(title.querySelector('.NPOS_infoTextClip'), 'scrollWidth', { value: 300, configurable: true });
+  builder.scrollLongLines(infoArea);
+
+  assert.equal(inner.started.length, 1);
+  assert.ok(!inner.started[0].cancelled);
+});
+
+test('a scrolling line that fits after a resize stops', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const title = scrollableLines(infoArea)[0];
+  const inner = layOut(title, 380, 260);
+  builder.scrollLongLines(infoArea);
+
+  Object.defineProperty(title.querySelector('.NPOS_infoTextClip'), 'clientWidth', { value: 400, configurable: true });
+  builder.scrollLongLines(infoArea);
+
+  assert.ok(inner.started[0].cancelled);
+  assert.equal(inner.getAnimations().length, 0);
+  assert.ok(!title.classList.contains('NPOS_infoText--scrolling'));
+});
+
+test('custom.css sets speed and pause of the scrolling', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  infoArea.style.setProperty('--NPOS-scroll-speed', '20');
+  infoArea.style.setProperty('--NPOS-scroll-pause', '3');
+  const inner = layOut(scrollableLines(infoArea)[0], 380, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  // 120 px at 20 px/s take 6 s plus 0.4 s of ramps each way, plus 3 s
+  // pause at either end.
+  const { keyframes, timing } = inner.started[0];
+  assert.equal(timing.duration, 18800);
+  assert.equal(keyframes[1].offset, 3000 / 18800);
+});
+
+test('keyframe offsets stay within 0 and 1 at any scroll speed', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  // At 30 px/s, 7 px used to round the last move's end to just above 1.
+  infoArea.style.setProperty('--NPOS-scroll-speed', '30');
+  const inner = layOut(scrollableLines(infoArea)[0], 267, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  const offsets = inner.started[0].keyframes.map((frame) => frame.offset);
+  offsets.forEach((offset, index) => {
+    assert.ok(offset >= 0 && offset <= 1, 'offset ' + offset + ' out of range');
+    assert.ok(index === 0 || offset >= offsets[index - 1], 'offsets decrease at ' + index);
+  });
+});
+
+test('invalid scroll settings fall back to the defaults', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  infoArea.style.setProperty('--NPOS-scroll-speed', '0');
+  infoArea.style.setProperty('--NPOS-scroll-pause', 'slow');
+  const inner = layOut(scrollableLines(infoArea)[0], 380, 260);
+
+  builder.scrollLongLines(infoArea);
+
+  // 120 px at 40 px/s take 3 s plus 0.4 s of ramps each way, plus 2 s
+  // pause at either end.
+  assert.equal(inner.started[0].timing.duration, 10800);
+});
+
+test('the lines carry the reviewed icons', () => {
+  const builder = loadBuilder();
+
+  const icons = Array.from(builder.getInfoArea(PLAYING).querySelectorAll('.NPOS_icon')).map((icon) => icon.className);
+
+  assert.deepEqual(icons, [
+    'NPOS_icon fa fa-music',
+    'NPOS_icon fa fa-microphone',
+    'NPOS_icon fa fa-compact-disc',
+    'NPOS_icon fa fa-play',
+    'NPOS_icon fa fa-headphones'
+  ]);
+});
+
+test('updating the info area keeps the text lines in place', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const wrapper = builder.getDom(PLAYING);
+  const linesBefore = Array.from(wrapper.querySelectorAll('.NPOS_infoText'));
+
+  builder.updateInfoArea(wrapper, Object.assign({}, PLAYING, { progress: 61000 }));
+
+  assert.deepEqual(Array.from(wrapper.querySelectorAll('.NPOS_infoText')), linesBefore);
+});
+
+test('the gap below the cover is set on the info area', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+
+  assert.match(css, /\.NPOS_coverArtArea \+ \.NPOS_infoArea\s*\{[^}]*margin-top/);
+  assert.doesNotMatch(css, /\.NPOS_albumCover\s*\{[^}]*margin-bottom/);
+});
+
+test('the README documents scrollLongText', () => {
+  assert.match(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8'), /`scrollLongText`/);
+});
+
+test('overflowing lines share one cycle and start together', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const [title, artist] = scrollableLines(infoArea);
+  const short = layOut(title, 300, 260).started;
+  const long = layOut(artist, 500, 260).started;
+
+  builder.scrollLongLines(infoArea);
+
+  // 240 px at 40 px/s take 6 s plus 0.4 s of ramps each way, plus 2 s
+  // pause at either end.
+  assert.equal(short[0].timing.duration, 16800);
+  assert.equal(long[0].timing.duration, 16800);
+  assert.equal(short[0].startTime, 1234);
+  assert.equal(long[0].startTime, 1234);
+});
+
+test('overflowing lines leave the start together and the end together', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const [title, artist] = scrollableLines(infoArea);
+  const short = layOut(title, 300, 260).started;
+  const long = layOut(artist, 500, 260).started;
+
+  builder.scrollLongLines(infoArea);
+
+  const offsets = (started) => Array.from(started[0].keyframes, (frame) => frame.offset);
+  const [, shortLeavesStart, , , shortArrives, shortLeavesEnd, , , shortReturns] = offsets(short);
+  const [, longLeavesStart, , , longArrives, longLeavesEnd] = offsets(long);
+  assert.equal(shortLeavesStart, longLeavesStart);
+  assert.equal(shortLeavesEnd, longLeavesEnd);
+  // The shorter line waits at the end while the longer one still moves.
+  assert.ok(shortArrives < longArrives);
+  assert.ok(shortReturns < 1);
+});
+
+test('a line whose width changes restarts all lines together', () => {
+  const builder = loadBuilder(null, { scrollLongText: true });
+  const infoArea = builder.getInfoArea(PLAYING);
+  const [title, artist] = scrollableLines(infoArea);
+  const titleInner = layOut(title, 300, 260);
+  const artistInner = layOut(artist, 500, 260);
+  builder.scrollLongLines(infoArea);
+
+  Object.defineProperty(titleInner, 'offsetWidth', { value: 350, configurable: true });
+  builder.scrollLongLines(infoArea);
+
+  assert.ok(artistInner.started[0].cancelled);
+  assert.equal(artistInner.getAnimations().length, 1);
+  assert.equal(titleInner.getAnimations().length, 1);
 });

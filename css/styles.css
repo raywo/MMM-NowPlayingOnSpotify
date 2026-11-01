@@ -85,7 +85,6 @@
 .NPOS_albumCover {
   border-radius: 0.5em;
   display: block;
-  margin-bottom: 0.6em;
   width: 100%;
 }
 
@@ -107,9 +106,15 @@
   position: relative;
 }
 
+/* The gap between cover and text sits on the info area, so custom.css can
+   change it there. */
+.NPOS_coverArtArea + .NPOS_infoArea {
+  margin-top: 0.6em;
+}
+
 /* The glow reaches beyond the cover; more room keeps it off the text. */
-.NPOS_coverArtArea--glow .NPOS_albumCover {
-  margin-bottom: 1.5em;
+.NPOS_coverArtArea--glow + .NPOS_infoArea {
+  margin-top: 1.5em;
 }
 
 /* A blurred, slightly enlarged copy of the cover that lets its colors bleed
@@ -127,7 +132,10 @@
   z-index: -1;
 }
 
+/* The module wrapper is .small, whose line height MagicMirror tightens to
+   1.25; the info lines get the mirror's body line height back. */
 .NPOS_infoArea {
+  line-height: 1.5;
   width: 100%;
 }
 
@@ -153,15 +161,36 @@
 }
 
 .NPOS_infoText {
-  overflow: hidden;
+  align-items: baseline;
+  display: flex;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   width: 100%;
 }
 
 .NPOS_icon {
+  flex: none;
   margin-right: 1em;
+}
+
+/* Clips the text, not the icon. min-width: 0 lets it shrink below the
+   width of its text, so overflow can be measured and cut off. */
+.NPOS_infoTextClip {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Set on lines that overflow while scrollLongText is on. The text becomes
+   a box of its own so it can move, and the ellipsis gives way to the
+   scrolling. */
+.NPOS_infoText--scrolling .NPOS_infoTextClip {
+  text-overflow: clip;
+}
+
+.NPOS_infoText--scrolling .NPOS_infoTextInner {
+  display: inline-block;
 }
 
 progress.NPOS_progress {

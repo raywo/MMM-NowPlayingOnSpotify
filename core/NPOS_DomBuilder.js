@@ -17,6 +17,20 @@ const NPOS_QR_QUIET_ZONE = 4;
 // Change while the same track plays; they only reach the info area.
 // hideWhileIdle is not shown at all.
 const NPOS_PLAYBACK_FIELDS = ['progress', 'isPlaying', 'hideWhileIdle'];
+// Scrolling of lines wider than the module. Both can be overridden in
+// custom.css through the custom properties named here.
+const NPOS_SCROLL_SPEED_PROPERTY = '--NPOS-scroll-speed';
+const NPOS_SCROLL_PAUSE_PROPERTY = '--NPOS-scroll-pause';
+const NPOS_DEFAULT_SCROLL_SPEED = 40;     // pixels per second
+const NPOS_DEFAULT_SCROLL_PAUSE = 2;      // seconds at either end
+// Every line speeds up and slows down within the same time, so lines of
+// any length move alike. A quadratic curve reaches the full speed exactly
+// at the end of its ramp, so the ramp joins the linear part without a jolt.
+const NPOS_SCROLL_RAMP_MS = 400;
+const NPOS_EASE_IN_QUAD = 'cubic-bezier(0.333, 0, 0.667, 0.333)';
+const NPOS_EASE_OUT_QUAD = 'cubic-bezier(0.333, 0.667, 0.667, 1)';
+const NPOS_SCROLLABLE_CLASS = 'NPOS_infoText--scrollable';
+const NPOS_SCROLLING_CLASS = 'NPOS_infoText--scrolling';
 
 class NPOS_DomBuilder {
 
@@ -265,12 +279,14 @@ class NPOS_DomBuilder {
     let infoArea = document.createElement('div');
     infoArea.className = 'NPOS_infoArea';
 
-    infoArea.appendChild(this.getInfoDiv('fa fa-music', context.songTitle));
-    infoArea.appendChild(this.getInfoDiv('fa fa-user', context.artist));
-    infoArea.appendChild(this.getInfoDiv('fa fa-folder', context.album));
-    infoArea.appendChild(this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context)));
+    infoArea.appendChild(this.getInfoDiv('fa fa-music', context.songTitle, true));
+    infoArea.appendChild(this.getInfoDiv('fa fa-microphone', context.artist, true));
+    infoArea.appendChild(this.getInfoDiv('fa fa-compact-disc', context.album, true));
+    let timeInfo = this.getInfoDiv(this.getPlayStatusIcon(context.isPlaying), this.getTimeInfo(context), false);
+    timeInfo.classList.add('NPOS_infoText--time');
+    infoArea.appendChild(timeInfo);
     infoArea.appendChild(this.getProgressBar(context));
-    infoArea.appendChild(this.getInfoDiv('', context.deviceName));
+    infoArea.appendChild(this.getInfoDiv(context.deviceName ? 'fa fa-headphones' : '', context.deviceName, true));
 
     return infoArea;
   }
@@ -305,9 +321,16 @@ class NPOS_DomBuilder {
     return value < 10 ? '0' + value : '' + value;
   }
 
-  getInfoDiv(symbol, text) {
+  /**
+   * A line of text with an optional icon in front. The text sits in a clip
+   * of its own, so a scrollable line moves only the text, not the icon.
+   */
+  getInfoDiv(symbol, text, scrollable) {
     let infoDiv = document.createElement('div');
     infoDiv.className = 'NPOS_infoText';
+    if (scrollable && this.config.scrollLongText) {
+      infoDiv.classList.add(NPOS_SCROLLABLE_CLASS);
+    }
 
     if (symbol) {
       let icon = document.createElement('i');
@@ -315,9 +338,136 @@ class NPOS_DomBuilder {
       infoDiv.appendChild(icon);
     }
 
-    infoDiv.appendChild(document.createTextNode(text));
+    let clip = document.createElement('div');
+    clip.className = 'NPOS_infoTextClip';
+    let inner = document.createElement('span');
+    inner.className = 'NPOS_infoTextInner';
+    inner.textContent = text;
+    clip.appendChild(inner);
+    infoDiv.appendChild(clip);
 
     return infoDiv;
+  }
+
+  /**
+   * Lets every scrollable line that is wider than the module scroll to its
+   * end and back. Needs the rendered layout, so call it once the info area
+   * is in the document, and again whenever its width changes.
+   *
+   * All lines share one cycle, set by the longest line: they leave the start
+   * together and the end together, so no two lines ever move in opposite
+   * directions. A shorter line arrives earlier and waits. While no distance
+   * changes, the running animations go on; otherwise all start over
+   * together, so they stay in step.
+   */
+  scrollLongLines(infoArea) {
+    let lines = Array.from(infoArea.querySelectorAll('.' + NPOS_SCROLLABLE_CLASS))
+      .map((line) => this.measureLine(line));
+    let distances = lines.map((entry) => entry.distance).join(',');
+    let overflowing = lines.filter((entry) => entry.distance > 0);
+    let running = overflowing.every((entry) => entry.inner.getAnimations().length > 0);
+
+    if (running && infoArea.dataset.scrollDistances === distances) {
+      return;
+    }
+    infoArea.dataset.scrollDistances = distances;
+
+    lines.forEach((entry) => {
+      entry.inner.getAnimations().forEach((animation) => animation.cancel());
+      entry.line.classList.toggle(NPOS_SCROLLING_CLASS, entry.distance > 0);
+    });
+    if (overflowing.length === 0) {
+      return;
+    }
+
+    let timing = this.getScrollTiming(infoArea, overflowing.map((entry) => entry.distance));
+    let startTime = document.timeline.currentTime;
+
+    overflowing.forEach((entry) => {
+      let animation = entry.inner.animate(this.getScrollKeyframes(entry.distance, timing), {
+        duration: timing.total,
+        iterations: Infinity
+      });
+      animation.startTime = startTime;
+    });
+  }
+
+  measureLine(line) {
+    let clip = line.querySelector('.NPOS_infoTextClip');
+    let inner = clip.firstChild;
+    // Not clip.scrollWidth: it counts the shifted text in and comes out
+    // short while the line is scrolled away from its start.
+    let distance = inner.offsetWidth - clip.clientWidth;
+
+    return { line, inner, distance: Math.max(distance, 0) };
+  }
+
+  /**
+   * One cycle for all lines, long enough for the longest one. speed is in
+   * pixels per millisecond, all times in milliseconds.
+   */
+  getScrollTiming(infoArea, distances) {
+    let style = getComputedStyle(infoArea);
+    let speed = this.readPositiveNumber(style, NPOS_SCROLL_SPEED_PROPERTY, NPOS_DEFAULT_SCROLL_SPEED) / NPOS_MS_PER_SECOND;
+    let pause = this.readPositiveNumber(style, NPOS_SCROLL_PAUSE_PROPERTY, NPOS_DEFAULT_SCROLL_PAUSE) * NPOS_MS_PER_SECOND;
+    let timing = { speed, pause };
+    let longestMove = Math.max(...distances.map((distance) => this.getScrollMove(distance, timing).time));
+
+    return Object.assign(timing, { longestMove, total: 2 * pause + 2 * longestMove });
+  }
+
+  /**
+   * Speeds up for the ramp time, moves at the common speed, slows down for
+   * the ramp time. Each ramp covers half the distance the full speed would
+   * in that time. A line too short for both ramps gets shorter ones.
+   */
+  getScrollMove(distance, timing) {
+    let ramp = Math.min(NPOS_SCROLL_RAMP_MS, distance / timing.speed);
+    let rampDistance = timing.speed * ramp / 2;
+
+    return { ramp, rampDistance, time: distance / timing.speed + ramp };
+  }
+
+  readPositiveNumber(style, property, fallback) {
+    let value = parseFloat(style.getPropertyValue(property));
+    return value > 0 ? value : fallback;
+  }
+
+  /**
+   * Pause at the start, scroll to the end at the common speed, wait there
+   * until the longest line has paused at its end as well, scroll back, and
+   * wait at the start for the next cycle.
+   */
+  getScrollKeyframes(distance, timing) {
+    let move = this.getScrollMove(distance, timing);
+    let leaveEnd = 2 * timing.pause + timing.longestMove;
+
+    return [
+      { transform: this.getShift(0), offset: 0 },
+      ...this.getMoveKeyframes(timing.pause, 0, -distance, move, timing),
+      ...this.getMoveKeyframes(leaveEnd, -distance, 0, move, timing),
+      { transform: this.getShift(0), offset: 1 }
+    ];
+  }
+
+  // Ramp up, linear part, ramp down, from one position to another.
+  getMoveKeyframes(leave, from, to, move, timing) {
+    let direction = Math.sign(to - from);
+    let linear = (Math.abs(to - from) - 2 * move.rampDistance) / timing.speed;
+    // Rounding can put the longest line's last offset just above 1, which
+    // animate() rejects.
+    let at = (time) => Math.min(time / timing.total, 1);
+
+    return [
+      { transform: this.getShift(from), offset: at(leave), easing: NPOS_EASE_IN_QUAD },
+      { transform: this.getShift(from + direction * move.rampDistance), offset: at(leave + move.ramp) },
+      { transform: this.getShift(to - direction * move.rampDistance), offset: at(leave + move.ramp + linear), easing: NPOS_EASE_OUT_QUAD },
+      { transform: this.getShift(to), offset: at(leave + move.time) }
+    ];
+  }
+
+  getShift(position) {
+    return 'translateX(' + (position === 0 ? 0 : position + 'px') + ')';
   }
 
   /**
@@ -333,18 +483,22 @@ class NPOS_DomBuilder {
   }
 
   /**
-   * Replaces only the info area of a rendered wrapper, so the cover and its
-   * blurred glow stay in place and are not rasterized again on every poll.
+   * Updates time, play state and progress bar of a rendered wrapper in
+   * place. The cover and its blurred glow are not rasterized again, and the
+   * scrolling lines keep running instead of starting over.
    *
    * @returns {boolean} false if the wrapper has no info area to update.
    */
   updateInfoArea(wrapper, context) {
-    let infoArea = wrapper.querySelector('.NPOS_infoArea');
-    if (!infoArea) {
+    let timeInfo = wrapper.querySelector('.NPOS_infoText--time');
+    let progressBar = wrapper.querySelector('.NPOS_progress');
+    if (!timeInfo || !progressBar) {
       return false;
     }
 
-    infoArea.replaceWith(this.getInfoArea(context));
+    timeInfo.querySelector('.NPOS_icon').className = 'NPOS_icon ' + this.getPlayStatusIcon(context.isPlaying);
+    timeInfo.querySelector('.NPOS_infoTextInner').textContent = this.getTimeInfo(context);
+    progressBar.value = context.progress;
 
     return true;
   }
