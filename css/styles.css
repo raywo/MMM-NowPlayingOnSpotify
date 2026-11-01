@@ -132,7 +132,10 @@
   z-index: -1;
 }
 
+/* The module wrapper is .small, whose line height MagicMirror tightens to
+   1.25; the info lines get the mirror's body line height back. */
 .NPOS_infoArea {
+  line-height: 1.5;
   width: 100%;
 }
 
