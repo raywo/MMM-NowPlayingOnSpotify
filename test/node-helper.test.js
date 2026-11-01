@@ -494,3 +494,82 @@ test('keeps the module hidden across a browser reload', async () => {
 
   assert.equal(lastSongData(helper).hideWhileIdle, true);
 });
+
+function songAt(progressMs, isPlaying) {
+  return Object.assign(songData(isPlaying), { progress_ms: progressMs });
+}
+
+test('polls right after the playing track ends when that comes before the interval', async () => {
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(196 * MS_PER_SECOND, true)]);
+
+  await helper.poll();
+
+  assert.deepEqual(helper.delays, [5500]);
+});
+
+test('polls at the interval while the track lasts longer than that', async () => {
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(100 * MS_PER_SECOND, true)]);
+
+  await helper.poll();
+
+  assert.deepEqual(helper.delays, [10000]);
+});
+
+test('a paused track does not bring the next poll forward', async () => {
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(199 * MS_PER_SECOND, false)]);
+
+  await helper.poll();
+
+  assert.deepEqual(helper.delays, [10000]);
+});
+
+test('a track reported past its end is polled again shortly after', async () => {
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(201 * MS_PER_SECOND, true)]);
+
+  await helper.poll();
+
+  assert.deepEqual(helper.delays, [1500]);
+});
+
+test('updatesEvery defaults to 3 seconds', async () => {
+  helper = createPollingHelper({}, [songAt(0, true)]);
+
+  await helper.poll();
+
+  assert.deepEqual(helper.delays, [3000]);
+});
+
+test('resent data carries the progress the playing track has reached since', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(10 * MS_PER_SECOND, true)]);
+  await helper.poll();
+
+  mock.timers.tick(4 * MS_PER_SECOND);
+  helper.startPolling = () => {};
+  helper.handleConnect(helper.config);
+
+  assert.equal(helper.notifications.at(-1).payload.progress, 14000);
+  assert.equal(helper.lastPayload.progress, 10000);
+});
+
+test('resent data never runs past the end of the track', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(198 * MS_PER_SECOND, true)]);
+  await helper.poll();
+
+  mock.timers.tick(60 * MS_PER_SECOND);
+  helper.sendSongData();
+
+  assert.equal(helper.notifications.at(-1).payload.progress, 200000);
+});
+
+test('resent data of a paused track keeps its progress', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  helper = createPollingHelper({ updatesEvery: 10 }, [songAt(10 * MS_PER_SECOND, false)]);
+  await helper.poll();
+
+  mock.timers.tick(4 * MS_PER_SECOND);
+  helper.sendSongData();
+
+  assert.equal(helper.notifications.at(-1).payload.progress, 10000);
+});

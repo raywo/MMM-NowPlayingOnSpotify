@@ -22,7 +22,7 @@ const AuthRequiredError = SpotifyConnector.AuthRequiredError;
 const RateLimitError = SpotifyConnector.RateLimitError;
 
 const MS_PER_SECOND = 1000;
-const DEFAULT_UPDATE_INTERVAL_S = 1;
+const DEFAULT_UPDATE_INTERVAL_S = 3;
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 
@@ -30,6 +30,10 @@ const MINUTES_PER_HOUR = 60;
 // the Pi, the network and Spotify's rate limit, which counts per app.
 const DEFAULT_IDLE_AFTER_S = 30;
 const DEFAULT_IDLE_UPDATE_INTERVAL_S = 10;
+
+// Poll this long after the current track should have ended, so Spotify
+// already reports the next one and the regular interval does not delay it.
+const TRACK_END_MARGIN_MS = 1500;
 
 // Failures are reported on the mirror only once the shown data would be at
 // least this old before the next attempt; brief hiccups stay invisible.
@@ -62,6 +66,8 @@ module.exports = NodeHelper.create({
     this.pollTimer = null;
     this.inFlight = false;
     this.lastPayload = null;
+    // When lastPayload was retrieved, to move its progress on when resent.
+    this.lastPayloadAt = null;
     // Start of the current stretch without playback, null while playing.
     this.idleSince = null;
     this.idle = false;
@@ -185,10 +191,11 @@ module.exports = NodeHelper.create({
       const authURL = this.authURLForWarning();
       const payload = this.buildPayload(data, authURL);
       this.lastPayload = payload;
+      this.lastPayloadAt = Date.now();
       this.noteRecovery();
       this.updateIdleState(this.isPlaying(data));
       this.sendSongData();
-      delayMs = this.updateIntervalMs();
+      delayMs = this.nextPollDelayMs(data);
     } catch (error) {
       if (error instanceof AuthRequiredError) {
         this.inFlight = false;
@@ -405,11 +412,17 @@ module.exports = NodeHelper.create({
    * Sends the last good data, marked as stale while Spotify is unavailable.
    * Without any data yet, the stale report goes with a nothing-playing payload.
    * Computed per send so a browser reload restores whether the module hides.
+   * The frontend counts progress on from the time a payload arrives, so a
+   * payload resent later carries the progress it has reached by now.
    */
   sendSongData: function () {
     let payload = Object.assign({}, this.lastPayload || this.buildPayload(null, null), {
       hideWhileIdle: this.shouldHideWhileIdle()
     });
+    if (payload.isPlaying && !payload.noSong) {
+      const elapsedMs = Date.now() - this.lastPayloadAt;
+      payload.progress = Math.min(payload.progress + elapsedMs, payload.titleLength);
+    }
     if (this.unavailable) {
       payload.unavailable = this.unavailable;
     }
@@ -464,6 +477,21 @@ module.exports = NodeHelper.create({
       return false;
     }
     return Date.now() - this.idleSince >= hideAfterSeconds * MS_PER_SECOND;
+  },
+
+
+  /**
+   * The regular interval, or right after the playing track ends if that is
+   * sooner, so the next track shows up when it starts.
+   */
+  nextPollDelayMs: function (data) {
+    const intervalMs = this.updateIntervalMs();
+    if (!this.isPlaying(data) || !data.item) {
+      return intervalMs;
+    }
+
+    const remainingMs = Math.max(data.item.duration_ms - data.progress_ms, 0);
+    return Math.min(intervalMs, remainingMs + TRACK_END_MARGIN_MS);
   },
 
 
