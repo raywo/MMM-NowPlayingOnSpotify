@@ -147,7 +147,7 @@ Module.register('MMM-NowPlayingOnSpotify', {
         this.initialized = true;
         this.authRequired = false;
         // A copy, since the tick moves its progress on.
-        this.context = Object.assign({}, payload);
+        this.context = { ...payload };
         this.progressBase = payload.progress;
         this.progressReceivedAt = Date.now();
         this.showSongData();
