@@ -107,7 +107,8 @@ Alternatively, open `http://127.0.0.1:8888` in a browser on the mirror's own des
 | `authHost` | The mirror's private IPv4 address in your local network, shown in the QR code. Default: detected automatically. Only used with the relay page. |
 | `authPort` | Port the module listens on in your local network during authorization. Default: `8888`. Only used with the relay page. |
 | `showCoverArt` | Show the album cover. Default: `true` |
-| `coverShadow` | Lift the album cover off the background with a soft shadow and a thin light outline. Default: `true`. Set it to `false` for a flat cover. |
+| `coverShadow` | Lift the album cover off the background with a soft shadow and a thin light outline. Default: `true`. Set it to `false` for a flat cover. Has no effect while `coverGlow` is `true`. |
+| `coverGlow` | Surround the album cover with a soft glow in the cover's own colors, so it blends into the background, and leave more room below the cover. Replaces the shadow of `coverShadow`. Default: `false`. |
 | `updatesEvery` | Interval in seconds for querying Spotify. Default: `1`. Higher values put less load on the Raspberry Pi and the network, but the display reacts later to song changes. |
 | `idleAfter` | Seconds without playback – nothing playing or paused – after which the module queries Spotify less often. Default: `30`. |
 | `idleUpdatesEvery` | Interval in seconds for querying Spotify while nothing is playing or playback is paused. Default: `10`. When playback starts, the display follows within this interval and then switches back to `updatesEvery`. Never shorter than `updatesEvery`; set it to the same value to query at a constant rate. |
@@ -121,7 +122,8 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 |-------|---------|
 | `.NPOS_playingContent` | Everything shown while a song plays; sets the module's width, 300px by default, so it does not fill the screen in wide regions such as `upper_third` or `fullscreen_above`. Follows the region's alignment: centered in wide regions, at the edge in side regions |
 | `.NPOS_albumCover` | Album cover image, or the cover of a podcast episode; as wide as `.NPOS_playingContent` |
-| `.NPOS_albumCover--shadow` | Shadow and outline of the album cover; only present while `coverShadow` is `true` |
+| `.NPOS_albumCover--shadow` | Shadow and outline of the album cover; only present while `coverShadow` is `true` and `coverGlow` is not |
+| `.NPOS_coverGlow` | Blurred copy of the album cover behind it; only present while `coverGlow` is `true`. As wide as `.NPOS_playingContent`, so give it the same width when you resize the cover |
 | `.NPOS_infoArea` | Text lines and progress bar below the cover; as wide as `.NPOS_playingContent` |
 | `.NPOS_infoText` | Each line of text (title, artist, album, time, device, in this order); text that does not fit ends in an ellipsis |
 | `.NPOS_progress` | Progress bar |
@@ -131,7 +133,8 @@ Override the module's styles in MagicMirror's `css/custom.css` – changes there
 For example, to shrink the cover and hide the logo when nothing is playing:
 
 ```css
-.MMM-NowPlayingOnSpotify .NPOS_albumCover {
+.MMM-NowPlayingOnSpotify .NPOS_albumCover,
+.MMM-NowPlayingOnSpotify .NPOS_coverGlow {
   width: 50%;
 }
 
@@ -147,7 +150,8 @@ A cover narrower than the module stays left-aligned, flush with the text. To mak
   width: 450px;
 }
 
-.MMM-NowPlayingOnSpotify .NPOS_albumCover {
+.MMM-NowPlayingOnSpotify .NPOS_albumCover,
+.MMM-NowPlayingOnSpotify .NPOS_coverGlow {
   width: 200px;
 }
 ```

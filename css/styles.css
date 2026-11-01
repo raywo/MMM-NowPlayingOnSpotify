@@ -99,6 +99,34 @@
     0 0.5em 2em rgba(0, 0, 0, 0.6);
 }
 
+/* Set by the coverGlow option. The area becomes its own stacking context so
+   the glow behind the cover stays in front of the mirror's background
+   instead of slipping behind it. */
+.NPOS_coverArtArea--glow {
+  isolation: isolate;
+  position: relative;
+}
+
+/* The glow reaches beyond the cover; more room keeps it off the text. */
+.NPOS_coverArtArea--glow .NPOS_albumCover {
+  margin-bottom: 1.5em;
+}
+
+/* A blurred, slightly enlarged copy of the cover that lets its colors bleed
+   into the surroundings. Same box as the cover, so it follows its size. */
+.NPOS_coverGlow {
+  border-radius: 0.5em;
+  filter: blur(1.5em) saturate(1.5);
+  left: 0;
+  opacity: 0.7;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transform: scale(1.08);
+  width: 100%;
+  z-index: -1;
+}
+
 .NPOS_infoArea {
   width: 100%;
 }
