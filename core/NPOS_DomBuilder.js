@@ -23,6 +23,12 @@ const NPOS_SCROLL_SPEED_PROPERTY = '--NPOS-scroll-speed';
 const NPOS_SCROLL_PAUSE_PROPERTY = '--NPOS-scroll-pause';
 const NPOS_DEFAULT_SCROLL_SPEED = 40;     // pixels per second
 const NPOS_DEFAULT_SCROLL_PAUSE = 2;      // seconds at either end
+// Every line speeds up and slows down within the same time, so lines of
+// any length move alike. A quadratic curve reaches the full speed exactly
+// at the end of its ramp, so the ramp joins the linear part without a jolt.
+const NPOS_SCROLL_RAMP_MS = 400;
+const NPOS_EASE_IN_QUAD = 'cubic-bezier(0.333, 0, 0.667, 0.333)';
+const NPOS_EASE_OUT_QUAD = 'cubic-bezier(0.333, 0.667, 0.667, 1)';
 const NPOS_SCROLLABLE_CLASS = 'NPOS_infoText--scrollable';
 const NPOS_SCROLLING_CLASS = 'NPOS_infoText--scrolling';
 
@@ -374,8 +380,7 @@ class NPOS_DomBuilder {
       return;
     }
 
-    let longest = Math.max(...overflowing.map((entry) => entry.distance));
-    let timing = this.getScrollTiming(infoArea, longest);
+    let timing = this.getScrollTiming(infoArea, overflowing.map((entry) => entry.distance));
     let startTime = document.timeline.currentTime;
 
     overflowing.forEach((entry) => {
@@ -401,13 +406,26 @@ class NPOS_DomBuilder {
    * One cycle for all lines, long enough for the longest one. speed is in
    * pixels per millisecond, all times in milliseconds.
    */
-  getScrollTiming(infoArea, longest) {
+  getScrollTiming(infoArea, distances) {
     let style = getComputedStyle(infoArea);
     let speed = this.readPositiveNumber(style, NPOS_SCROLL_SPEED_PROPERTY, NPOS_DEFAULT_SCROLL_SPEED) / NPOS_MS_PER_SECOND;
     let pause = this.readPositiveNumber(style, NPOS_SCROLL_PAUSE_PROPERTY, NPOS_DEFAULT_SCROLL_PAUSE) * NPOS_MS_PER_SECOND;
-    let longestMove = longest / speed;
+    let timing = { speed, pause };
+    let longestMove = Math.max(...distances.map((distance) => this.getScrollMove(distance, timing).time));
 
-    return { speed, pause, longestMove, total: 2 * pause + 2 * longestMove };
+    return Object.assign(timing, { longestMove, total: 2 * pause + 2 * longestMove });
+  }
+
+  /**
+   * Speeds up for the ramp time, moves at the common speed, slows down for
+   * the ramp time. Each ramp covers half the distance the full speed would
+   * in that time. A line too short for both ramps gets shorter ones.
+   */
+  getScrollMove(distance, timing) {
+    let ramp = Math.min(NPOS_SCROLL_RAMP_MS, distance / timing.speed);
+    let rampDistance = timing.speed * ramp / 2;
+
+    return { ramp, rampDistance, time: distance / timing.speed + ramp };
   }
 
   readPositiveNumber(style, property, fallback) {
@@ -421,21 +439,33 @@ class NPOS_DomBuilder {
    * wait at the start for the next cycle.
    */
   getScrollKeyframes(distance, timing) {
-    let start = 'translateX(0)';
-    let end = 'translateX(' + (-distance) + 'px)';
-    let move = distance / timing.speed;
-    let leaveStart = timing.pause;
+    let move = this.getScrollMove(distance, timing);
     let leaveEnd = 2 * timing.pause + timing.longestMove;
+
+    return [
+      { transform: this.getShift(0), offset: 0 },
+      ...this.getMoveKeyframes(timing.pause, 0, -distance, move, timing),
+      ...this.getMoveKeyframes(leaveEnd, -distance, 0, move, timing),
+      { transform: this.getShift(0), offset: 1 }
+    ];
+  }
+
+  // Ramp up, linear part, ramp down, from one position to another.
+  getMoveKeyframes(leave, from, to, move, timing) {
+    let direction = Math.sign(to - from);
+    let linear = (Math.abs(to - from) - 2 * move.rampDistance) / timing.speed;
     let at = (time) => time / timing.total;
 
     return [
-      { transform: start, offset: 0 },
-      { transform: start, offset: at(leaveStart), easing: 'ease-in-out' },
-      { transform: end, offset: at(leaveStart + move) },
-      { transform: end, offset: at(leaveEnd), easing: 'ease-in-out' },
-      { transform: start, offset: at(leaveEnd + move) },
-      { transform: start, offset: 1 }
+      { transform: this.getShift(from), offset: at(leave), easing: NPOS_EASE_IN_QUAD },
+      { transform: this.getShift(from + direction * move.rampDistance), offset: at(leave + move.ramp) },
+      { transform: this.getShift(to - direction * move.rampDistance), offset: at(leave + move.ramp + linear), easing: NPOS_EASE_OUT_QUAD },
+      { transform: this.getShift(to), offset: at(leave + move.time) }
     ];
+  }
+
+  getShift(position) {
+    return 'translateX(' + (position === 0 ? 0 : position + 'px') + ')';
   }
 
   /**

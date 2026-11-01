@@ -262,7 +262,13 @@ test('a line wider than its clip scrolls exactly to its end and back', () => {
   builder.scrollLongLines(infoArea);
 
   const transforms = Array.from(inner.started[0].keyframes, (frame) => frame.transform);
-  assert.deepEqual(transforms, ['translateX(0)', 'translateX(0)', 'translateX(-120px)', 'translateX(-120px)', 'translateX(0)', 'translateX(0)']);
+  // Ramps of 0.4 s at 40 px/s cover 8 px each.
+  assert.deepEqual(transforms, [
+    'translateX(0)',
+    'translateX(0)', 'translateX(-8px)', 'translateX(-112px)', 'translateX(-120px)',
+    'translateX(-120px)', 'translateX(-112px)', 'translateX(-8px)', 'translateX(0)',
+    'translateX(0)'
+  ]);
   assert.equal(inner.started[0].timing.iterations, Infinity);
   assert.ok(title.classList.contains('NPOS_infoText--scrolling'));
 });
@@ -279,21 +285,29 @@ test('a line that fits does not move', () => {
   assert.ok(!title.classList.contains('NPOS_infoText--scrolling'));
 });
 
-test('lines of different length scroll at the same speed', () => {
+test('lines of different length move alike until the shorter one stops', () => {
   const builder = loadBuilder(null, { scrollLongText: true });
   const infoArea = builder.getInfoArea(PLAYING);
   const [title, artist] = scrollableLines(infoArea);
-  const short = layOut(title, 300, 260);
-  const long = layOut(artist, 500, 260);
+  const shortInner = layOut(title, 300, 260);
+  const longInner = layOut(artist, 500, 260);
 
   builder.scrollLongLines(infoArea);
 
-  // Moving time per pixel, from the keyframe between start and end.
-  const msPerPixel = (inner, distance) => {
-    const { keyframes, timing } = inner.started[0];
-    return (keyframes[2].offset - keyframes[1].offset) * timing.duration / distance;
-  };
-  assert.ok(Math.abs(msPerPixel(short, 40) - msPerPixel(long, 240)) < 1e-9);
+  const short = shortInner.started[0];
+  const long = longInner.started[0];
+  const position = (frame) => parseFloat(frame.transform.slice('translateX('.length));
+  const time = (animation, index) => animation.keyframes[index].offset * animation.timing.duration;
+  // Speed of the linear part, between the end of the ramp up and the start
+  // of the ramp down, in pixels per millisecond.
+  const speed = (animation) => (position(animation.keyframes[3]) - position(animation.keyframes[2]))
+    / (time(animation, 3) - time(animation, 2));
+
+  assert.equal(time(short, 2), time(long, 2));
+  assert.equal(short.keyframes[2].transform, long.keyframes[2].transform);
+  assert.equal(short.keyframes[1].easing, long.keyframes[1].easing);
+  assert.ok(Math.abs(speed(short) - speed(long)) < 1e-9);
+  assert.ok(Math.abs(speed(long) + 0.04) < 1e-9);
 });
 
 test('measuring again with the same width keeps the running animation', () => {
@@ -347,10 +361,11 @@ test('custom.css sets speed and pause of the scrolling', () => {
 
   builder.scrollLongLines(infoArea);
 
-  // 120 px at 20 px/s take 6 s each way, plus 3 s pause at either end.
+  // 120 px at 20 px/s take 6 s plus 0.4 s of ramps each way, plus 3 s
+  // pause at either end.
   const { keyframes, timing } = inner.started[0];
-  assert.equal(timing.duration, 18000);
-  assert.equal(keyframes[1].offset, 3000 / 18000);
+  assert.equal(timing.duration, 18800);
+  assert.equal(keyframes[1].offset, 3000 / 18800);
 });
 
 test('invalid scroll settings fall back to the defaults', () => {
@@ -362,8 +377,9 @@ test('invalid scroll settings fall back to the defaults', () => {
 
   builder.scrollLongLines(infoArea);
 
-  // 120 px at 40 px/s take 3 s each way, plus 2 s pause at either end.
-  assert.equal(inner.started[0].timing.duration, 10000);
+  // 120 px at 40 px/s take 3 s plus 0.4 s of ramps each way, plus 2 s
+  // pause at either end.
+  assert.equal(inner.started[0].timing.duration, 10800);
 });
 
 test('the lines carry the reviewed icons', () => {
@@ -410,9 +426,10 @@ test('overflowing lines share one cycle and start together', () => {
 
   builder.scrollLongLines(infoArea);
 
-  // 240 px at 40 px/s take 6 s each way, plus 2 s pause at either end.
-  assert.equal(short[0].timing.duration, 16000);
-  assert.equal(long[0].timing.duration, 16000);
+  // 240 px at 40 px/s take 6 s plus 0.4 s of ramps each way, plus 2 s
+  // pause at either end.
+  assert.equal(short[0].timing.duration, 16800);
+  assert.equal(long[0].timing.duration, 16800);
   assert.equal(short[0].startTime, 1234);
   assert.equal(long[0].startTime, 1234);
 });
@@ -427,8 +444,8 @@ test('overflowing lines leave the start together and the end together', () => {
   builder.scrollLongLines(infoArea);
 
   const offsets = (started) => Array.from(started[0].keyframes, (frame) => frame.offset);
-  const [, shortLeavesStart, shortArrives, shortLeavesEnd, shortReturns] = offsets(short);
-  const [, longLeavesStart, longArrives, longLeavesEnd] = offsets(long);
+  const [, shortLeavesStart, , , shortArrives, shortLeavesEnd, , , shortReturns] = offsets(short);
+  const [, longLeavesStart, , , longArrives, longLeavesEnd] = offsets(long);
   assert.equal(shortLeavesStart, longLeavesStart);
   assert.equal(shortLeavesEnd, longLeavesEnd);
   // The shorter line waits at the end while the longer one still moves.
