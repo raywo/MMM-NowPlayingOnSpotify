@@ -2,7 +2,7 @@
 
 A module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) displaying the song currently playing on Spotify: title, artist, album, progress, the playing device and, optionally, the album cover. A podcast episode shows its publisher in place of the artist and its show in place of the album.
 
-<img src="img/readme/NowPlayingOnSpotify.png" alt="A song playing, with cover art" width="348">
+<img src="img/readme/screenshot.png" alt="A song playing, with cover art" width="348">
 
 The module talks to the Spotify Web API directly. You create your own Spotify app, authorize it once, and the module keeps itself authorized from then on. Spotify refresh tokens expire six months after authorization; the module warns you about two weeks ahead and shows a re-authorization banner on the mirror instead of silently going blank.
 
